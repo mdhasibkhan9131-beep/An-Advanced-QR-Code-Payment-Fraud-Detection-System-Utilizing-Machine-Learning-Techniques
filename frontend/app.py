@@ -20,12 +20,25 @@ from backend.ledger.audit_chain import ledger_instance
 from backend.models.supervised import LightGBMClassifierWrapper, DEFAULT_LIGHTGBM_PATH
 from backend.models.unsupervised import IsolationForestDetector, DEFAULT_IFOREST_PATH
 from backend.data.preprocessor import DataPreprocessor, DEFAULT_SCALER_PATH
-from backend.data.feature_engineering import (
-    calculate_haversine_km,
-    calculate_shannon_entropy,
-    calculate_amount_zscore,
-    validate_payment_qr_payload,
-)
+try:
+    from backend.data.feature_engineering import (
+        calculate_haversine_km,
+        calculate_shannon_entropy,
+        calculate_amount_zscore,
+        validate_payment_qr_payload,
+    )
+except ImportError:
+    # If Streamlit holds a stale in-memory sys.modules cache, force fresh reload
+    import sys
+    import importlib
+    if "backend.data.feature_engineering" in sys.modules:
+        importlib.reload(sys.modules["backend.data.feature_engineering"])
+    from backend.data.feature_engineering import (
+        calculate_haversine_km,
+        calculate_shannon_entropy,
+        calculate_amount_zscore,
+        validate_payment_qr_payload,
+    )
 from backend.models.ensemble import HybridScorer, DecisionGatingEngine
 from backend.xai.explainer import SHAPTreeExplainer
 
