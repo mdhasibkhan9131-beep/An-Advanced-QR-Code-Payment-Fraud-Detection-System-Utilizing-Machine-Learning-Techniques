@@ -96,3 +96,4 @@ In a separate terminal session:
 streamlit run frontend/app.py --server.port 8501
 ```
 The Fintech Dark Theme Dashboard will be accessible at: `http://localhost:8501`.
+

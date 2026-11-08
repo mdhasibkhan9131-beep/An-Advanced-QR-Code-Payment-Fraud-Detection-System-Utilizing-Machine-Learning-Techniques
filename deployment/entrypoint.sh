@@ -29,3 +29,4 @@ fi
 
 echo "[Entrypoint] Launching application process: $@"
 exec "$@"
+

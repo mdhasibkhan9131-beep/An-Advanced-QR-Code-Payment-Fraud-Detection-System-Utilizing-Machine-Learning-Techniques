@@ -70,3 +70,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 # Default command launches FastAPI gateway with 4 workers
 CMD ["uvicorn", "backend.api.server:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+

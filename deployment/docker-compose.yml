@@ -74,3 +74,4 @@ services:
 networks:
   default:
     name: qr-fraud-network
+

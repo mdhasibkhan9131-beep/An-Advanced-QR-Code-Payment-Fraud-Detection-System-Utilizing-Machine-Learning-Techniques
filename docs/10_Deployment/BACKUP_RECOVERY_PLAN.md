@@ -78,3 +78,4 @@ Ensure Test 6 passes: `Auditing SHA-256 Ledger Blockchain -> PASS (CHAIN_INTEGRI
 
 1. **Scheduled Quarterly Drills:** Simulate sudden host shutdown and verify point-in-time recovery to a secondary machine within 5 minutes.
 2. **Offsite Snapshot Archival:** Sync `database/backups/` to cold offline storage (e.g., encrypted local NAS or external drive) weekly.
+

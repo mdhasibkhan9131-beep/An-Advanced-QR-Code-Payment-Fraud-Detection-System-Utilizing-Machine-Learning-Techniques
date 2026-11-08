@@ -73,3 +73,4 @@ PRAGMA cache_size = -64000;  -- 64 MB in-memory cache
 PRAGMA temp_store = MEMORY;
 PRAGMA mmap_size = 268435456; -- 256 MB memory-mapped I/O
 ```
+

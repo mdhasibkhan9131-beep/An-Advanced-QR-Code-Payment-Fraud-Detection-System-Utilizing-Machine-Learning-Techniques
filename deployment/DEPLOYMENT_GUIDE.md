@@ -17,3 +17,4 @@ curl -f http://localhost:8000/api/v1/health
 # 4. Run post-deployment smoke test
 python scripts/smoke_test.py --url http://localhost:8000
 ```
+

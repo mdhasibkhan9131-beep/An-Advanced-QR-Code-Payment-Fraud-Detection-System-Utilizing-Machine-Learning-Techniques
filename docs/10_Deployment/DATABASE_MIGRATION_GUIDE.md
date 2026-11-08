@@ -85,3 +85,4 @@ When extending schemas in future sprints or releases:
    curl -s http://localhost:8000/api/v1/ledger/verify
    ```
    Ensure output reports `"is_valid": true` and `"status": "CHAIN_INTEGRITY_VERIFIED"`.
+

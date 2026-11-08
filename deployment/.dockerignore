@@ -21,3 +21,4 @@ logs/*.log
 database/*.db-journal
 database/*.db-wal
 database/*.db-shm
+
