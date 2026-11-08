@@ -53,3 +53,4 @@ def test_transaction_record_insert(db_session):
     assert retrieved is not None
     assert retrieved.amount == 150.00
     assert retrieved.verdict == "APPROVE"
+

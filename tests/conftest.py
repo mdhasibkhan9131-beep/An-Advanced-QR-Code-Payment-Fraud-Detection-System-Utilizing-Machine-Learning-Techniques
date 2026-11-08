@@ -67,3 +67,4 @@ async def async_client(db_session):
         yield client
 
     app.dependency_overrides.clear()
+

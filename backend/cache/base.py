@@ -34,3 +34,4 @@ class StateCacheInterface(ABC):
     def clear(self) -> None:
         """Flushes cache state (useful for test isolation)."""
         pass
+

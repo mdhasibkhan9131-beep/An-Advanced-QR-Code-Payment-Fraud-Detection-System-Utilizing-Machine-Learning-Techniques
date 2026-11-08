@@ -90,3 +90,4 @@ async def test_predict_invalid_latitude_rejection(async_client):
     data = response.json()
     assert data["error_code"] == "UNPROCESSABLE_ENTITY"
     assert any("payer_latitude" in str(d["field"]) for d in data["details"])
+

@@ -20,3 +20,4 @@ def hash_sensitive_identifier(raw_id: str, salt: str | None = None) -> str:
 def generate_secure_token(length: int = 32) -> str:
     """Generates cryptographically random URL-safe token."""
     return secrets.token_urlsafe(length)
+
