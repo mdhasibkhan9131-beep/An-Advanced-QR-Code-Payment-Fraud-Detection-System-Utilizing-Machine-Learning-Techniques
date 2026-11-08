@@ -20,25 +20,12 @@ from backend.ledger.audit_chain import ledger_instance
 from backend.models.supervised import LightGBMClassifierWrapper, DEFAULT_LIGHTGBM_PATH
 from backend.models.unsupervised import IsolationForestDetector, DEFAULT_IFOREST_PATH
 from backend.data.preprocessor import DataPreprocessor, DEFAULT_SCALER_PATH
-try:
-    from backend.data.feature_engineering import (
-        calculate_haversine_km,
-        calculate_shannon_entropy,
-        calculate_amount_zscore,
-        validate_payment_qr_payload,
-    )
-except ImportError:
-    # If Streamlit holds a stale in-memory sys.modules cache, force fresh reload
-    import sys
-    import importlib
-    if "backend.data.feature_engineering" in sys.modules:
-        importlib.reload(sys.modules["backend.data.feature_engineering"])
-    from backend.data.feature_engineering import (
-        calculate_haversine_km,
-        calculate_shannon_entropy,
-        calculate_amount_zscore,
-        validate_payment_qr_payload,
-    )
+from backend.data.feature_engineering import (
+    calculate_haversine_km,
+    calculate_shannon_entropy,
+    calculate_amount_zscore,
+    validate_payment_qr_payload,
+)
 from backend.models.ensemble import HybridScorer, DecisionGatingEngine
 from backend.xai.explainer import SHAPTreeExplainer
 
@@ -432,18 +419,13 @@ elif menu == "⚡ Fraud Vector Simulator":
 
         # Save to DB and Ledger
         db = SessionLocal()
-        tx_id = f"sim-{int(time.time()*1000)}"
-        block = ledger_instance.append_block(
-            db=db,
-            transaction_id=tx_id,
-            composite_score=comp_score,
-            verdict=verdict,
-            timestamp=int(time.time()*1000),
-            reason_codes=reasons,
-        )
+        now_ts = int(time.time() * 1000)
+        tx_id = f"sim-{now_ts}"
+
+        # 1. Stage Transaction Record FIRST to satisfy Foreign Key constraint
         rec = TransactionRecord(
             transaction_id=tx_id,
-            timestamp=int(time.time()*1000),
+            timestamp=now_ts,
             payer_hash="payer_simulated_hash",
             merchant_id=f"MCH_{mcc}",
             qr_type=qr_type,
@@ -467,7 +449,18 @@ elif menu == "⚡ Fraud Vector Simulator":
             verdict=verdict,
             is_fallback=0,
         )
-        db.merge(rec)
+        db.add(rec)
+        db.flush()
+
+        # 2. Append Chained Ledger Block AFTER Transaction Record is staged
+        block = ledger_instance.append_block(
+            db=db,
+            transaction_id=tx_id,
+            composite_score=comp_score,
+            verdict=verdict,
+            timestamp=now_ts,
+            reason_codes=reasons,
+        )
         db.commit()
         db.close()
         st.success(f"Transaction recorded and chained in Cryptographic Ledger! Block Hash: `{block.block_hash[:24]}...`")
