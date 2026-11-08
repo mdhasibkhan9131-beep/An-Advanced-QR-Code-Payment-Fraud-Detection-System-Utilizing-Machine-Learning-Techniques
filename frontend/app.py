@@ -118,11 +118,32 @@ if menu == "📊 Live Telemetry & Dashboard":
 
     col1, col2, col3, col4 = st.columns(4)
     db = SessionLocal()
-    total_tx = db.query(TransactionRecord).count()
-    blocks_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "BLOCK").count()
-    challenge_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "CHALLENGE_MFA").count()
-    approve_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "APPROVE").count()
-    db.close()
+    records = []
+    try:
+        total_tx = db.query(TransactionRecord).count()
+        blocks_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "BLOCK").count()
+        challenge_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "CHALLENGE_MFA").count()
+        approve_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "APPROVE").count()
+
+        recent_txs = (
+            db.query(TransactionRecord)
+            .order_by(TransactionRecord.timestamp.desc())
+            .limit(10)
+            .all()
+        )
+        if recent_txs:
+            for r in recent_txs:
+                records.append({
+                    "Tx ID": r.transaction_id[:12] + "...",
+                    "Payer Hash": r.payer_hash[:10] + "...",
+                    "Amount (BDT)": f"৳{r.amount:,.2f}",
+                    "Supervised": f"{r.supervised_score:.3f}",
+                    "Anomaly": f"{r.anomaly_score:.3f}",
+                    "Composite": f"{r.composite_score:.3f}",
+                    "Verdict": r.verdict,
+                })
+    finally:
+        db.close()
 
     col1.metric("Total Transactions", f"{total_tx:,}")
     col2.metric("Approved (Routine)", f"{approve_count:,}")
@@ -130,28 +151,8 @@ if menu == "📊 Live Telemetry & Dashboard":
     col4.metric("Blocked (Fraud)", f"{blocks_count:,}")
 
     st.subheader("Recent Evaluated Transactions")
-    db = SessionLocal()
-    recent_txs = (
-        db.query(TransactionRecord)
-        .order_by(TransactionRecord.timestamp.desc())
-        .limit(10)
-        .all()
-    )
-    db.close()
-
-    if recent_txs:
-        records = []
-        for r in recent_txs:
-            records.append({
-                "Tx ID": r.transaction_id[:12] + "...",
-                "Payer Hash": r.payer_hash[:10] + "...",
-                "Amount (BDT)": f"৳{r.amount:,.2f}",
-                "Supervised": f"{r.supervised_score:.3f}",
-                "Anomaly": f"{r.anomaly_score:.3f}",
-                "Composite": f"{r.composite_score:.3f}",
-                "Verdict": r.verdict,
-            })
-        st.dataframe(pd.DataFrame(records), use_container_width=True)
+    if records:
+        st.dataframe(pd.DataFrame(records), width="stretch")
     else:
         st.info("No live transactions in database yet. Use the Fraud Vector Simulator to test transactions!")
 
@@ -449,21 +450,26 @@ elif menu == "⚡ Fraud Vector Simulator":
             verdict=verdict,
             is_fallback=0,
         )
-        db.add(rec)
-        db.flush()
+        block_hash_val = "GENESIS_PENDING"
+        try:
+            db.add(rec)
+            db.flush()
 
-        # 2. Append Chained Ledger Block AFTER Transaction Record is staged
-        block = ledger_instance.append_block(
-            db=db,
-            transaction_id=tx_id,
-            composite_score=comp_score,
-            verdict=verdict,
-            timestamp=now_ts,
-            reason_codes=reasons,
-        )
-        db.commit()
-        db.close()
-        st.success(f"Transaction recorded and chained in Cryptographic Ledger! Block Hash: `{block.block_hash[:24]}...`")
+            # 2. Append Chained Ledger Block AFTER Transaction Record is staged
+            block = ledger_instance.append_block(
+                db=db,
+                transaction_id=tx_id,
+                composite_score=comp_score,
+                verdict=verdict,
+                timestamp=now_ts,
+                reason_codes=reasons,
+            )
+            db.commit()
+            block_hash_val = str(block.block_hash) if block and hasattr(block, "block_hash") else "RECORDED"
+        finally:
+            db.close()
+
+        st.success(f"Transaction recorded and chained in Cryptographic Ledger! Block Hash: `{block_hash_val[:24]}...`")
 
 
 # -------------------------------------------------------------
@@ -480,7 +486,7 @@ elif menu == "🏆 Model Benchmark Scoreboard":
         b_df = pd.DataFrame(b_data).T
 
         st.subheader("Model Evaluation Metrics Scoreboard")
-        st.dataframe(b_df.style.highlight_max(axis=0, subset=["accuracy", "precision", "recall", "f1_score", "roc_auc"]), use_container_width=True)
+        st.dataframe(b_df.style.highlight_max(axis=0, subset=["accuracy", "precision", "recall", "f1_score", "roc_auc"]), width="stretch")
 
         st.subheader("Inference Latency Comparison (Sub-100ms SLA)")
         latency_chart_df = b_df[["latency_ms"]].copy()
@@ -497,29 +503,32 @@ elif menu == "🔗 Cryptographic Audit Ledger":
     st.caption("Immutable append-only ledger linking evaluation verdicts to predecessor parent blocks.")
 
     db = SessionLocal()
-    audit_res = ledger_instance.verify_integrity(db)
-    blocks = db.query(LedgerBlock).order_by(LedgerBlock.block_id.desc()).limit(20).all()
-    db.close()
+    block_list = []
+    try:
+        audit_res = ledger_instance.verify_integrity(db)
+        blocks = db.query(LedgerBlock).order_by(LedgerBlock.block_id.desc()).limit(20).all()
+        if blocks:
+            for b in blocks:
+                block_list.append({
+                    "Block ID": b.block_id,
+                    "Tx ID": b.transaction_id[:16],
+                    "Verdict": b.verdict,
+                    "Score": f"{b.composite_score:.4f}",
+                    "Block Hash": b.block_hash[:20] + "...",
+                    "Prev Hash": b.prev_hash[:20] + "...",
+                    "Signature": b.state_signature[:16] + "...",
+                })
+    finally:
+        db.close()
 
     if audit_res["is_valid"]:
         st.success(f"✅ **Ledger Status:** {audit_res['message']} (Total Blocks: {audit_res['total_blocks']})")
     else:
         st.error(f"🚨 **Tampering Detected!** {audit_res['error']}")
 
-    if blocks:
+    if block_list:
         st.subheader("Latest Cryptographic Blocks")
-        block_list = []
-        for b in blocks:
-            block_list.append({
-                "Block ID": b.block_id,
-                "Tx ID": b.transaction_id[:16],
-                "Verdict": b.verdict,
-                "Score": f"{b.composite_score:.4f}",
-                "Block Hash": b.block_hash[:20] + "...",
-                "Prev Hash": b.prev_hash[:20] + "...",
-                "Signature": b.state_signature[:16] + "...",
-            })
-        st.dataframe(pd.DataFrame(block_list), use_container_width=True)
+        st.dataframe(pd.DataFrame(block_list), width="stretch")
 
 
 # -------------------------------------------------------------
