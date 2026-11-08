@@ -10,6 +10,8 @@ import os
 import streamlit as st
 import numpy as np
 import pandas as pd
+from PIL import Image
+import cv2
 
 from backend.config.settings import settings
 from backend.database.session import SessionLocal
@@ -150,15 +152,67 @@ if menu == "📊 Live Telemetry & Dashboard":
 
 
 # -------------------------------------------------------------
-# Screen 2: Fraud Vector Simulator
+# Screen 2: Fraud Vector Simulator & QR Code Scanner
 # -------------------------------------------------------------
 elif menu == "⚡ Fraud Vector Simulator":
-    st.header("Interactive Fraud Vector Simulator")
-    st.caption("Simulate incoming payment requests against the active LightGBM + Isolation Forest hybrid engine.")
+    st.header("Interactive Fraud Vector Simulator & QR Code Scanner")
+    st.caption("Upload and scan a physical QR code image or simulate payment attack vectors against the hybrid ML engine.")
+
+    input_mode = st.radio(
+        "Select QR Code Input Method:",
+        ["📷 Upload & Scan QR Code Image", "🎯 Attack Archetype Presets / Manual"],
+        horizontal=True
+    )
+
+    detected_qr_payload = ""
+    computed_entropy = None
+
+    if input_mode == "📷 Upload & Scan QR Code Image":
+        st.markdown("#### 📤 Upload QR Code Image (.png, .jpg, .jpeg, .webp)")
+        uploaded_file = st.file_uploader(
+            "Choose a QR code image to decode and analyze:",
+            type=["png", "jpg", "jpeg", "webp"],
+            help="Upload any physical QR code sticker, printed payment standee, or digital wallet QR code."
+        )
+
+        if uploaded_file is not None:
+            pil_img = Image.open(uploaded_file).convert("RGB")
+            cv_img = np.array(pil_img)
+
+            # Detect & Decode with OpenCV
+            detector = cv2.QRCodeDetector()
+            decoded_data, bbox, _ = detector.detectAndDecode(cv_img)
+
+            col_img, col_info = st.columns([1, 2])
+            with col_img:
+                st.image(uploaded_file, caption="Uploaded QR Code", width=220)
+
+            with col_info:
+                if decoded_data:
+                    detected_qr_payload = decoded_data
+                    computed_entropy = float(calculate_shannon_entropy(decoded_data))
+                    st.success(f"✅ **Decoded Payload:** `{decoded_data}`")
+                    
+                    metric_col1, metric_col2 = st.columns(2)
+                    metric_col1.metric("Payload Length", f"{len(decoded_data)} chars")
+                    metric_col2.metric(
+                        "Shannon Entropy",
+                        f"{computed_entropy:.2f} bits",
+                        delta="High Risk (>4.5 bits)" if computed_entropy > 4.5 else "Routine (<4.0 bits)",
+                        delta_color="inverse" if computed_entropy > 4.5 else "normal"
+                    )
+
+                    if computed_entropy > 4.5:
+                        st.error("🚨 **Quishing Alert:** High entropy payload detected! The QR code contains randomized tokens or obfuscated redirect parameters characteristic of malicious sticker replacements.")
+                    else:
+                        st.info("ℹ️ Payload exhibits normal entropy characteristics typical of standard EMVCo/bKash merchant identifiers.")
+                else:
+                    st.warning("⚠️ Could not decode QR code from this image. Please ensure the QR code is clearly visible, well-lit, and in focus.")
 
     archetype = st.selectbox(
-        "Select Attack Archetype Preset",
+        "Select Transaction Profile / Attack Preset",
         [
+            "Use Uploaded QR Data (if available)" if detected_qr_payload else "Routine Legitimate Payment",
             "Routine Legitimate Payment",
             "Sticker Replacement (Quishing)",
             "Dynamic QR MITM Amount Surge",
@@ -170,7 +224,16 @@ elif menu == "⚡ Fraud Vector Simulator":
     with st.form("simulator_form"):
         colA, colB, colC = st.columns(3)
 
-        if archetype == "Routine Legitimate Payment":
+        if detected_qr_payload and archetype == "Use Uploaded QR Data (if available)":
+            default_amount = 350.0
+            default_qr_type = 0
+            default_disp = 0.5
+            default_latency = 4500
+            default_trust = 0.95
+            default_v5m = 1.0
+            default_pin = 0
+            default_entropy = computed_entropy if computed_entropy is not None else 3.6
+        elif archetype == "Routine Legitimate Payment":
             default_amount = 350.0
             default_qr_type = 0
             default_disp = 0.5
