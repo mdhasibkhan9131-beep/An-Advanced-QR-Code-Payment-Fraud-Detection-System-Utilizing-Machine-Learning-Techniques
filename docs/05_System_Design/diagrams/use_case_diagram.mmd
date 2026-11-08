@@ -1,0 +1,42 @@
+graph LR
+    %% Actors
+    ClientActor["👤 Payment Client / POS Scanner"]
+    AnalystActor["👤 Fraud Operations Analyst"]
+    AuditorActor["👤 Compliance & Audit Officer"]
+    AdminActor["👤 ML Engineer / Admin"]
+
+    %% Use Cases
+    subgraph CoreFraudBoundary["Advanced QR Fraud Detection System"]
+        UC01(["UC-01: Evaluate Transaction (/predict)"])
+        UC02(["UC-02: Challenge MFA Authentication"])
+        UC03(["UC-03: Intercept & Block High-Risk Fraud"])
+        UC04(["UC-04: Escalate Zero-Day Anomaly"])
+        UC05(["UC-05: Monitor Live Telemetry Dashboard"])
+        UC06(["UC-06: Inspect SHAP Feature Waterfall"])
+        UC07(["UC-07: Verify Cryptographic Ledger Chain"])
+        UC08(["UC-08: Execute Model Benchmarking Suite"])
+        UC09(["UC-09: Run Federated Averaging Simulation"])
+        UC10(["UC-10: Trigger Heuristic Fallback"])
+    end
+
+    %% Actor Connections
+    ClientActor --> UC01
+    ClientActor --> UC02
+
+    AnalystActor --> UC05
+    AnalystActor --> UC06
+    AnalystActor --> UC03
+
+    AuditorActor --> UC07
+    AuditorActor --> UC06
+
+    AdminActor --> UC08
+    AdminActor --> UC09
+    AdminActor --> UC05
+
+    %% Internal Includes / Extends
+    UC01 -.->|includes| UC04
+    UC01 -.->|on timeout| UC10
+    UC01 -.->|on high risk| UC03
+    UC01 -.->|on medium risk| UC02
+

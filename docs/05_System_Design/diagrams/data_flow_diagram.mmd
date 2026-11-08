@@ -1,0 +1,37 @@
+flowchart TD
+    subgraph DFD_Level_0["Data Flow Diagram - Level 0 (Context Level)"]
+        ExternalClient["External Entity:\nPayment Client / POS Terminal"]
+        SystemProcess(("Process 0.0:\nQR Payment Fraud\nDetection System"))
+        AuditorEntity["External Entity:\nCompliance Officer / Auditor"]
+
+        ExternalClient -->|Raw Transaction JSON| SystemProcess
+        SystemProcess -->|Verdict, Risk Score & Reason Codes| ExternalClient
+        AuditorEntity -->|Audit Query Request| SystemProcess
+        SystemProcess -->|Cryptographic Verification Report| AuditorEntity
+    end
+
+    subgraph DFD_Level_1["Data Flow Diagram - Level 1 (Functional Decomposition)"]
+        direction TB
+        P1(("Process 1.0:\nIngestion & Schema\nValidation"))
+        P2(("Process 2.0:\nFeature Extraction\n& Velocity Tracking"))
+        P3(("Process 3.0:\nDual-Engine ML\n& Anomaly Inference"))
+        P4(("Process 4.0:\nDecision Gating\n& XAI Explainer"))
+        P5(("Process 5.0:\nCryptographic Ledger\n& Audit Commitment"))
+
+        DS1[("D1: Rolling Velocity Cache (Memory/Redis)")]
+        DS2[("D2: Pre-trained Model Weights (.joblib/.pt)")]
+        DS3[("D3: SQLite Transactions & Ledger Table")]
+
+        ExternalClient -->|Raw Payload| P1
+        P1 -->|Sanitized Vector & Hashed PII| P2
+        P2 <-->|Read / Increment Counters| DS1
+        P2 -->|Engineered Normalized Vector X| P3
+        DS2 -->|Model Parameters| P3
+        P3 -->|P_fraud & S_anomaly| P4
+        P4 -->|Verdict, Scores & Reasons| ExternalClient
+        P4 -->|Authorized Block Payload| P5
+        P5 -->|Append Hash-Chained Block| DS3
+        DS3 -->|Verify Chain Digests| P5
+        P5 -->|Verification Output| AuditorEntity
+    end
+

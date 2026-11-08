@@ -1,0 +1,39 @@
+flowchart TD
+    Start([Start: Ingest Transaction Payload]) --> ValidateSchema{Pydantic Schema\n& Bounds Check}
+
+    ValidateSchema -->|Invalid / Out-of-Bounds| Reject422([Return HTTP 422 Unprocessable Entity])
+    ValidateSchema -->|Valid| CheckTimestamp{Timestamp Drift\nWithin +/- 300s?}
+
+    CheckTimestamp -->|Drift Exceeded| FlagDrift[Flag TIMESTAMP_DRIFT_EXCEEDED]
+    CheckTimestamp -->|Valid| MaskPII[Salt & Hash PII Identifiers]
+    FlagDrift --> MaskPII
+
+    MaskPII --> ExtractFeatures[Compute Haversine, Entropy & Query Cache Velocities]
+    ExtractFeatures --> CheckTimeout{Execution Time\n> 120ms?}
+
+    CheckTimeout -->|Yes: Timeout Exceeded| CircuitBreaker[Engage Heuristic Fallback Engine]
+    CircuitBreaker --> FallbackDecision{Amount > $1000\nor Velocity > 5?}
+    FallbackDecision -->|Yes| VerdictChallenge[Assign Verdict: CHALLENGE_MFA]
+    FallbackDecision -->|No| VerdictApprove[Assign Verdict: APPROVE]
+
+    CheckTimeout -->|No: Within SLA| RunDualModels[Execute LightGBM & Isolation Forest]
+    RunDualModels --> CalcComposite[Compute S_composite = 0.70*P + 0.30*A]
+
+    CalcComposite --> CheckZeroDay{P_supervised in [0.25, 0.45]\nand S_anomaly > 0.80?}
+    CheckZeroDay -->|Yes: Novel Threat| VerdictChallenge
+
+    CheckZeroDay -->|No: Standard Logic| CheckScoreTier{Composite Score\nThresholds}
+    CheckScoreTier -->|S_composite < 0.30| VerdictApprove
+    CheckScoreTier -->|0.30 <= S_composite <= 0.70| VerdictChallenge
+    CheckScoreTier -->|S_composite > 0.70| VerdictBlock[Assign Verdict: BLOCK]
+
+    VerdictApprove --> SkipXAI[Bypass Real-Time SHAP]
+    VerdictChallenge --> ComputeXAI[Calculate SHAP TreeExplainer Local Attribution]
+    VerdictBlock --> ComputeXAI
+
+    ComputeXAI --> ExtractReasons[Generate Top-3 Human-Readable Reason Codes]
+    ExtractReasons --> AppendLedger[Append SHA-256 Block to Cryptographic Ledger]
+    SkipXAI --> AppendLedger
+
+    AppendLedger --> ReturnResponse([Return HTTP 200 JSON Response <= 100ms])
+

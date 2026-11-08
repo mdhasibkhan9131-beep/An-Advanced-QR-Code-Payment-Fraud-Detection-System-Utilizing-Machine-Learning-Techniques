@@ -1,0 +1,49 @@
+sequenceDiagram
+    autonumber
+    actor Client as Payment Client / POS
+    participant Gateway as FastAPI Gateway
+    participant Validator as Pydantic v2 Validator
+    participant FeatureEngine as Feature & Cache Pipeline
+    participant Cache as In-Memory State Cache
+    participant MLModels as Dual ML Models (LGBM & iForest)
+    participant Ensemble as Decision & Policy Gating
+    participant XAI as SHAP TreeExplainer
+    participant Ledger as Cryptographic Ledger
+
+    Client->>Gateway: POST /api/v1/predict (JSON Payload)
+    Gateway->>Validator: Validate Schema & Coordinate Bounds
+    alt Schema Invalid / Adversarial Range
+        Validator-->>Gateway: ValidationError (HTTP 422)
+        Gateway-->>Client: 422 Unprocessable Entity
+    else Schema Valid
+        Validator-->>Gateway: Sanitized & Salted Model Vector
+    end
+
+    Gateway->>FeatureEngine: Compute Haversine, Entropy, & Velocities
+    FeatureEngine->>Cache: Query & Increment Rolling Counters (5m, 1h, 24h)
+    Cache-->>FeatureEngine: Return Velocity Counts
+    FeatureEngine-->>Gateway: Normalized Feature Vector X
+
+    par Supervised Scoring
+        Gateway->>MLModels: LightGBM predict_proba(X)
+        MLModels-->>Gateway: P(Fraud) in [0, 1]
+    and Unsupervised Scoring
+        Gateway->>MLModels: Isolation Forest decision_function(X)
+        MLModels-->>Gateway: S(Anomaly) in [0, 1]
+    end
+
+    Gateway->>Ensemble: Arbitrate Composite Score S_comp = 0.70*P + 0.30*S
+    Ensemble-->>Gateway: Verdict (APPROVE / CHALLENGE_MFA / BLOCK)
+
+    alt Verdict is CHALLENGE_MFA or BLOCK
+        Gateway->>XAI: Compute Local Shapley Values for X
+        XAI-->>Gateway: Top-3 Feature Reason Codes
+    else Verdict is APPROVE
+        Note over Gateway,XAI: Synchronous SHAP Bypassed (0ms overhead)
+    end
+
+    Gateway->>Ledger: Append Block (TxID, S_comp, Verdict, PrevHash)
+    Ledger-->>Gateway: Block Committed (Block Hash H_k)
+
+    Gateway-->>Client: HTTP 200 OK {status, score, verdict, reason_codes} (<= 100ms)
+

@@ -1,0 +1,68 @@
+graph TD
+    subgraph ClientLayer["Client & Ingestion Tier"]
+        ClientApp["Mobile Wallet / POS Scanner"]
+        FastAPIGateway["FastAPI Gateway (/api/v1/predict)"]
+        PydanticValidator["Pydantic v2 Schema & Boundary Validator"]
+    end
+
+    subgraph StateAndFeatures["Feature Engineering & State Tier"]
+        SaltPII["PII Salted Hash (SHA-256)"]
+        GeoEngine["Haversine Spatial Distance Calculator"]
+        EntropyEngine["Shannon Entropy Analyzer"]
+        VelocityEngine["Stateful Velocity Engine (5m, 1h, 24h)"]
+        InMemoryCache[("Thread-Safe In-Memory TTL Cache / Redis")]
+        ScalerEngine["RobustScaler Online Normalizer"]
+    end
+
+    subgraph ModelEngine["Dual-Model Hybrid Inference Tier"]
+        SupervisedModel["Supervised Classifier (LightGBM Engine)"]
+        AnomalyModel["Unsupervised Anomaly Detector (Isolation Forest)"]
+        HybridEnsemble["Calibrated Ensemble Fusion (S_comp = 0.70*P + 0.30*A)"]
+        DecisionGating["3-Tier Policy Gating (Approve / Challenge / Block)"]
+        FallbackEngine["Heuristic Fallback Circuit Breaker (Timeout > 120ms)"]
+    end
+
+    subgraph GovernanceTier["Explainability & Governance Tier"]
+        SHAPEngine["SHAP TreeExplainer (Local Attributions)"]
+        ReasonCodes["Human-Readable Reason Code Generator"]
+        AuditLedger["Cryptographic Audit Ledger (SHA-256 Chained)"]
+        SQLiteDB[("SQLite WAL Persistent Store")]
+    end
+
+    subgraph PresentationTier["Presentation & Monitoring Tier"]
+        StreamlitUI["Streamlit Real-Time Monitoring Dashboard"]
+        Simulator["Interactive Fraud Vector Simulator"]
+        FedSim["Federated Learning (FedAvg) Research Module"]
+    end
+
+    %% Flow Connections
+    ClientApp -->|HTTP POST JSON Payload| FastAPIGateway
+    FastAPIGateway --> PydanticValidator
+    PydanticValidator --> SaltPII
+    SaltPII --> GeoEngine
+    SaltPII --> EntropyEngine
+    SaltPII --> VelocityEngine
+    VelocityEngine <-->|Read / Write Rolling Counters| InMemoryCache
+    GeoEngine & EntropyEngine & VelocityEngine --> ScalerEngine
+
+    ScalerEngine -->|Feature Vector X| SupervisedModel
+    ScalerEngine -->|Feature Vector X| AnomalyModel
+    SupervisedModel -->|P_fraud| HybridEnsemble
+    AnomalyModel -->|S_anomaly| HybridEnsemble
+    HybridEnsemble --> DecisionGating
+
+    FastAPIGateway -.->|Async Timeout Interceptor| FallbackEngine
+    FallbackEngine -.->|Fallback Verdict| DecisionGating
+
+    DecisionGating -->|If Challenge or Block| SHAPEngine
+    SHAPEngine --> ReasonCodes
+    DecisionGating -->|All Decisions & Vectors| AuditLedger
+    AuditLedger --> SQLiteDB
+
+    SQLiteDB -.-> StreamlitUI
+    Simulator -.->|Simulated Payloads| FastAPIGateway
+    SQLiteDB -.-> FedSim
+
+    DecisionGating -->|JSON Verdict + Reason Codes| FastAPIGateway
+    FastAPIGateway -->|HTTP 200 Response <= 100ms| ClientApp
+

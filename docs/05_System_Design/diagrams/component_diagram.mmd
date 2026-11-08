@@ -1,0 +1,71 @@
+graph LR
+    subgraph APISubsystem["Subsystem: api"]
+        direction TB
+        Server["api.server\n(FastAPI / Uvicorn)"]
+        Routes["api.routes\n(REST Handlers)"]
+        Schema["api.schema\n(Pydantic Contracts)"]
+        Fallback["api.fallback\n(Heuristic Circuit Breaker)"]
+    end
+
+    subgraph DataSubsystem["Subsystem: data"]
+        direction TB
+        Generator["data.generator\n(Synthetic QR Stream)"]
+        FeatureEng["data.feature_engineering\n(Haversine & Entropy)"]
+        Preprocessor["data.preprocessor\n(Scaling & Masking)"]
+    end
+
+    subgraph CacheSubsystem["Subsystem: cache"]
+        direction TB
+        CacheInterface["cache.base\n(StateCache ABC)"]
+        MemCache["cache.memory\n(Thread-Safe TTL)"]
+        RedisCache["cache.redis\n(Redis Adapter)"]
+    end
+
+    subgraph ModelSubsystem["Subsystem: models"]
+        direction TB
+        ModelBase["models.base\n(Classifier ABC)"]
+        LightGBMMod["models.supervised\n(LightGBM / RF / MLP)"]
+        IsoForest["models.unsupervised\n(Isolation Forest)"]
+        Ensemble["models.ensemble\n(Hybrid Gating)"]
+        Trainer["models.trainer\n(SMOTE & CV)"]
+    end
+
+    subgraph XAISubsystem["Subsystem: xai"]
+        direction TB
+        Explainer["xai.explainer\n(SHAP TreeExplainer)"]
+    end
+
+    subgraph LedgerSubsystem["Subsystem: ledger"]
+        direction TB
+        AuditChain["ledger.audit_chain\n(SHA-256 Chained Blocks)"]
+        DBStore["database.session\n(SQLAlchemy / SQLite)"]
+    end
+
+    subgraph UISubsystem["Subsystem: ui"]
+        direction TB
+        Dashboard["ui.app\n(Streamlit Dashboard)"]
+        SimView["ui.simulator\n(Interactive Vector Sliders)"]
+    end
+
+    %% Dependencies
+    Routes --> Schema
+    Routes --> Fallback
+    Routes --> FeatureEng
+    FeatureEng --> Preprocessor
+    FeatureEng --> CacheInterface
+    CacheInterface --> MemCache
+    CacheInterface --> RedisCache
+
+    Routes --> Ensemble
+    Ensemble --> LightGBMMod
+    Ensemble --> IsoForest
+    LightGBMMod --> ModelBase
+    Trainer --> Generator
+    Trainer --> LightGBMMod
+
+    Routes --> Explainer
+    Routes --> AuditChain
+    AuditChain --> DBStore
+    Dashboard --> Routes
+    SimView --> Routes
+

@@ -1,0 +1,80 @@
+erDiagram
+    TRANSACTION ||--o| LEDGER_BLOCK : "committed to"
+    TRANSACTION ||--o| MFA_CHALLENGE : "triggers"
+    TRANSACTION }o--|| MODEL_METRIC : "evaluated by"
+    LEDGER_BLOCK ||--o{ AUDIT_EVENT : "audited in"
+
+    TRANSACTION {
+        string transaction_id PK "UUIDv4"
+        bigint timestamp "Epoch ms"
+        string payer_hash "Salted SHA-256"
+        string merchant_id "Alphanumeric ID"
+        int qr_type "0: Static, 1: Dynamic"
+        float qr_payload_entropy "0.0 - 8.0"
+        float amount "Transaction value"
+        int merchant_category_code "ISO 18245 MCC"
+        float payer_latitude "Latitude degrees"
+        float payer_longitude "Longitude degrees"
+        float merchant_latitude "Latitude degrees"
+        float merchant_longitude "Longitude degrees"
+        float haversine_distance_km "Spatial distance"
+        float device_trust_score "0.0 - 1.0"
+        int scan_to_pay_latency_ms "Elapsed ms"
+        int failed_pin_attempts "0 - 5"
+        float velocity_1h "Trailing 1-hour count"
+        float velocity_ratio "1h / (24h + 1)"
+        float amount_zscore "Deviation from baseline"
+        float supervised_score "P(Fraud) in [0, 1]"
+        float anomaly_score "Isolation score in [0, 1]"
+        float composite_score "Blended score in [0, 1]"
+        string verdict "APPROVE / CHALLENGE_MFA / BLOCK"
+        int is_fallback "Boolean flag: 0 or 1"
+        string created_at "ISO-8601 Timestamp"
+    }
+
+    LEDGER_BLOCK {
+        int block_id PK "Auto-incrementing ID"
+        string prev_hash "SHA-256 digest of parent"
+        string block_hash "SHA-256 digest of this block"
+        string transaction_id FK "Reference to transaction"
+        float composite_score "Recorded risk index"
+        string verdict "Recorded authorization decision"
+        bigint timestamp "Block creation epoch ms"
+        string reason_codes "Comma-separated XAI reasons"
+        string state_signature "HMAC or Salted Signature"
+    }
+
+    MFA_CHALLENGE {
+        string challenge_id PK "UUIDv4 token"
+        string transaction_id FK "Reference to transaction"
+        string status "PENDING / VERIFIED / EXPIRED"
+        bigint issued_at "Epoch ms"
+        bigint expires_at "Epoch ms"
+        string verified_at "ISO-8601 Timestamp"
+    }
+
+    MODEL_METRIC {
+        int metric_id PK "Auto-incrementing ID"
+        string model_name "LightGBM / RF / SVM / MLP / iForest"
+        string model_version "Semantic version tag"
+        float recall "Test set sensitivity"
+        float precision "Test set PPV"
+        float f1_score "Harmonic mean"
+        float f2_score "Recall-weighted F-beta"
+        float pr_auc "Precision-Recall AUC"
+        float p50_latency_ms "Median inference latency"
+        float p95_latency_ms "95th percentile latency"
+        float p99_latency_ms "99th percentile latency"
+        bigint evaluated_at "Epoch ms"
+    }
+
+    AUDIT_EVENT {
+        int event_id PK "Auto-incrementing ID"
+        string event_type "INTEGRITY_CHECK / RETRAIN / TAMPER"
+        string status "SUCCESS / FAILURE / ALERT"
+        string details "Descriptive event log"
+        int target_block_id "Referenced block index"
+        string performed_by "System / Auditor / Admin"
+        string timestamp "ISO-8601 Timestamp"
+    }
+

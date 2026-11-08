@@ -1,0 +1,6 @@
+2026-11-08 22:48:02 [WARNING] fraud_detection (errors.py:22): Validation failure on /api/v1/predict: [ErrorDetail(field='body -> amount', issue='Input should be greater than 0')]
+2026-11-08 22:48:02 [WARNING] fraud_detection (errors.py:22): Validation failure on /api/v1/predict: [ErrorDetail(field='body -> payer_latitude', issue='Input should be less than or equal to 90')]
+2026-11-08 22:49:05 [WARNING] fraud_detection (errors.py:22): Validation failure on /api/v1/predict: [ErrorDetail(field='body -> amount', issue='Input should be greater than 0')]
+2026-11-08 22:49:05 [WARNING] fraud_detection (errors.py:22): Validation failure on /api/v1/predict: [ErrorDetail(field='body -> payer_latitude', issue='Input should be less than or equal to 90')]
+2026-11-08 22:49:18 [WARNING] fraud_detection (errors.py:22): Validation failure on /api/v1/predict: [ErrorDetail(field='body -> amount', issue='Input should be greater than 0')]
+2026-11-08 22:49:18 [WARNING] fraud_detection (errors.py:22): Validation failure on /api/v1/predict: [ErrorDetail(field='body -> payer_latitude', issue='Input should be less than or equal to 90')]
