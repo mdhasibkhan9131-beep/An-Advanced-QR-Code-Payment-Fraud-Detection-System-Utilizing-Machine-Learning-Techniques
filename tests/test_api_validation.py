@@ -91,3 +91,32 @@ async def test_predict_invalid_latitude_rejection(async_client):
     assert data["error_code"] == "UNPROCESSABLE_ENTITY"
     assert any("payer_latitude" in str(d["field"]) for d in data["details"])
 
+
+@pytest.mark.asyncio
+async def test_predict_non_payment_url_blocked(async_client):
+    """Verify non-payment generic web URLs (e.g. proofpoint.com) are BLOCKED by payment guardrail."""
+    payload = {
+        "transaction_id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb7e",
+        "timestamp": 1731102000000,
+        "payer_id": "ACC_PAYER_884920",
+        "merchant_id": "MERCH_POS_104829",
+        "qr_type": 0,
+        "qr_payload": "https://www.proofpoint.com",  # Generic external website
+        "amount": 500.00,
+        "merchant_category_code": 5411,
+        "payer_latitude": 23.8103,
+        "payer_longitude": 90.4125,
+        "merchant_latitude": 23.8110,
+        "merchant_longitude": 90.4132,
+        "device_trust_score": 0.95,
+        "scan_to_pay_latency_ms": 3200,
+        "failed_pin_attempts": 0
+    }
+    response = await async_client.post("/api/v1/predict", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["verdict"] == "BLOCK"
+    assert data["composite_score"] == 1.0
+    assert any("NON_PAYMENT" in code for code in data["reason_codes"])
+

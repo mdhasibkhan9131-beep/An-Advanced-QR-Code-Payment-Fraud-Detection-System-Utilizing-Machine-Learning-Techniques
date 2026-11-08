@@ -20,7 +20,12 @@ from backend.ledger.audit_chain import ledger_instance
 from backend.models.supervised import LightGBMClassifierWrapper, DEFAULT_LIGHTGBM_PATH
 from backend.models.unsupervised import IsolationForestDetector, DEFAULT_IFOREST_PATH
 from backend.data.preprocessor import DataPreprocessor, DEFAULT_SCALER_PATH
-from backend.data.feature_engineering import calculate_haversine_km, calculate_shannon_entropy, calculate_amount_zscore
+from backend.data.feature_engineering import (
+    calculate_haversine_km,
+    calculate_shannon_entropy,
+    calculate_amount_zscore,
+    validate_payment_qr_payload,
+)
 from backend.models.ensemble import HybridScorer, DecisionGatingEngine
 from backend.xai.explainer import SHAPTreeExplainer
 
@@ -191,8 +196,22 @@ elif menu == "⚡ Fraud Vector Simulator":
                 if decoded_data:
                     detected_qr_payload = decoded_data
                     computed_entropy = float(calculate_shannon_entropy(decoded_data))
-                    st.success(f"✅ **Decoded Payload:** `{decoded_data}`")
-                    
+                    qr_val = validate_payment_qr_payload(decoded_data)
+                    st.session_state["uploaded_qr_payload"] = decoded_data
+                    st.session_state["uploaded_qr_val"] = qr_val
+
+                    if qr_val["is_payment"]:
+                        st.success(f"✅ **Decoded Payload:** `{decoded_data}`")
+                        st.info(f"💳 **Payment Format Recognized:** {qr_val['category']}\n\n*{qr_val['message']}*")
+                    else:
+                        st.error(f"🚫 **NON-PAYMENT QR CODE REJECTED:** `{decoded_data}`")
+                        st.warning(
+                            f"⚠️ **Security Alert:** `{qr_val['category']}`\n\n"
+                            f"**Reason:** {qr_val['message']}\n\n"
+                            f"🔒 **Enforcement Policy:** This QR code does NOT belong to any verified merchant or payment network (no EMVCo, Bangla QR, bKash, or Bank credentials). "
+                            f"Transactions targeting generic web URLs are **AUTOMATICALLY BLOCKED** to prevent phishing & redirection fraud."
+                        )
+
                     metric_col1, metric_col2 = st.columns(2)
                     metric_col1.metric("Payload Length", f"{len(decoded_data)} chars")
                     metric_col2.metric(
@@ -204,27 +223,46 @@ elif menu == "⚡ Fraud Vector Simulator":
 
                     if computed_entropy > 4.5:
                         st.error("🚨 **Quishing Alert:** High entropy payload detected! The QR code contains randomized tokens or obfuscated redirect parameters characteristic of malicious sticker replacements.")
-                    else:
+                    elif qr_val["is_payment"]:
                         st.info("ℹ️ Payload exhibits normal entropy characteristics typical of standard EMVCo/bKash merchant identifiers.")
+                    else:
+                        st.info("ℹ️ Payload exhibits low entropy typical of standard web URLs, but lacks merchant payment credentials.")
                 else:
                     st.warning("⚠️ Could not decode QR code from this image. Please ensure the QR code is clearly visible, well-lit, and in focus.")
 
-    archetype = st.selectbox(
-        "Select Transaction Profile / Attack Preset",
-        [
-            "Use Uploaded QR Data (if available)" if detected_qr_payload else "Routine Legitimate Payment",
+    # Determine default option for archetype selector
+    uploaded_qr_val = st.session_state.get("uploaded_qr_val", {})
+    if detected_qr_payload:
+        if uploaded_qr_val.get("is_payment", False):
+            uploaded_label = f"Use Uploaded QR Data ({detected_qr_payload[:24]}...)"
+        else:
+            uploaded_label = f"Use Uploaded QR [INVALID: {detected_qr_payload[:22]}...]"
+        archetype_options = [
+            uploaded_label,
             "Routine Legitimate Payment",
             "Sticker Replacement (Quishing)",
             "Dynamic QR MITM Amount Surge",
             "High-Velocity Credential Probing Bot",
             "Custom Vector",
-        ],
+        ]
+    else:
+        archetype_options = [
+            "Routine Legitimate Payment",
+            "Sticker Replacement (Quishing)",
+            "Dynamic QR MITM Amount Surge",
+            "High-Velocity Credential Probing Bot",
+            "Custom Vector",
+        ]
+
+    archetype = st.selectbox(
+        "Select Transaction Profile / Attack Preset",
+        archetype_options,
     )
 
     with st.form("simulator_form"):
         colA, colB, colC = st.columns(3)
 
-        if detected_qr_payload and archetype == "Use Uploaded QR Data (if available)":
+        if detected_qr_payload and ("Uploaded QR" in archetype):
             default_amount = 350.0
             default_qr_type = 0
             default_disp = 0.5
@@ -295,6 +333,23 @@ elif menu == "⚡ Fraud Vector Simulator":
 
     if submit_btn:
         t0 = time.perf_counter()
+
+        # Identify target QR payload string for validation
+        if detected_qr_payload and ("Uploaded QR" in archetype):
+            eval_payload = detected_qr_payload
+        elif archetype == "Sticker Replacement (Quishing)":
+            eval_payload = "https://secure-qr.bkash-auth.net/pay/v2?redirect=login&session=7f9a8b1c4e2d3f0a9b8c7d6e5f4a3b2c1d0e9f8a"
+        elif archetype == "Routine Legitimate Payment":
+            eval_payload = "00020101021126580014bd.bkash.b2b0110MCH_5411_01520454115303050"
+        elif archetype == "Dynamic QR MITM Amount Surge":
+            eval_payload = "00020101021226580014bd.bkash.b2b0110MCH_5812"
+        elif detected_qr_payload:
+            eval_payload = detected_qr_payload
+        else:
+            eval_payload = "00020101021126580014bd.bkash.b2b"
+
+        payload_eval_res = validate_payment_qr_payload(eval_payload)
+
         # Assemble feature vector
         # 16 features: [qr_type, qr_payload_entropy, amount, mcc, lat1, lon1, lat2, lon2, haversine, trust, latency, pin, v5m, v1h, v_ratio, zscore]
         zscore = (amount - 300.0) / 100.0
@@ -307,7 +362,23 @@ elif menu == "⚡ Fraud Vector Simulator":
             velocity_5m, v1h, v_ratio, zscore
         ], dtype=np.float32).reshape(1, -1)
 
-        if scaler and lgbm and iforest:
+        # ---------------------------------------------------------
+        # Strict Payment Guardrail Interception
+        # ---------------------------------------------------------
+        if not payload_eval_res["is_payment"]:
+            # Hard rejection: Non-payment web links or plain text cannot proceed
+            verdict = "BLOCK"
+            sup_score = 1.0000
+            ano_score = 1.0000
+            comp_score = 1.0000
+            is_zero_day = True
+            policy = "Strict Payment Schema Guardrail Rejection (Non-Payment Target)"
+            reasons = [
+                payload_eval_res.get("risk_flag", "NON_PAYMENT_PAYLOAD_REJECTED"),
+                f"UNAUTHORIZED_TARGET: {eval_payload[:36]}",
+                "PAYMENT_SCHEMA_VIOLATION",
+            ]
+        elif scaler and lgbm and iforest:
             scaled_vec = scaler.transform(feat_vector)
             sup_score = float(lgbm.predict_proba(scaled_vec)[0, 1])
             ano_score = float(iforest.score_anomaly(scaled_vec)[0])
@@ -338,6 +409,13 @@ elif menu == "⚡ Fraud Vector Simulator":
 
         if reasons:
             st.warning(f"**Identified Risk Reason Codes:** {', '.join(reasons)}")
+
+        if not payload_eval_res["is_payment"]:
+            st.error(
+                f"🛑 **PAYMENT FORCED BLOCK (NON-PAYMENT TARGET):**\n\n"
+                f"This transaction was blocked at the gateway security guardrail because the QR payload (`{eval_payload}`) "
+                f"is an external web URL, not an authorized merchant payment endpoint. Funds cannot be routed to non-merchant websites."
+            )
 
         # Save to DB and Ledger
         db = SessionLocal()

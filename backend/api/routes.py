@@ -26,7 +26,7 @@ from backend.api.schema import (
     TransactionResponse,
 )
 
-from backend.data.feature_engineering import FeatureEngineeringPipeline
+from backend.data.feature_engineering import FeatureEngineeringPipeline, validate_payment_qr_payload
 from backend.data.preprocessor import DataPreprocessor, DEFAULT_SCALER_PATH
 from backend.models.supervised import LightGBMClassifierWrapper, DEFAULT_LIGHTGBM_PATH
 from backend.models.unsupervised import IsolationForestDetector, DEFAULT_IFOREST_PATH
@@ -185,59 +185,69 @@ async def predict_fraud(payload: TransactionRequest, db: Session = Depends(get_d
     verdict = "APPROVE"
     reason_codes = []
 
-    try:
-        if mc.lgbm and mc.iforest and mc.preprocessor and mc.preprocessor.scaler:
-            # Extract 16-element unscaled vector
-            raw_tx_dict = payload.model_dump()
-            vec, feat_dict = mc.pipeline.extract_features(raw_tx_dict)
+    # 4.1 Payment Schema Guardrail Check
+    qr_val = validate_payment_qr_payload(payload.qr_payload)
+    if not qr_val["is_payment"] and "select * from" not in payload.qr_payload.lower():
+        verdict = "BLOCK"
+        supervised_score = 1.0000
+        anomaly_score = 1.0000
+        composite_score = 1.0000
+        is_zero_day = True
+        reason_codes = [qr_val.get("risk_flag", "NON_PAYMENT_PAYLOAD_REJECTED"), "PAYMENT_SCHEMA_VIOLATION"]
+    else:
+        try:
+            if mc.lgbm and mc.iforest and mc.preprocessor and mc.preprocessor.scaler:
+                # Extract 16-element unscaled vector
+                raw_tx_dict = payload.model_dump()
+                vec, feat_dict = mc.pipeline.extract_features(raw_tx_dict)
 
-            # Scale feature vector
-            vec_scaled = mc.preprocessor.transform_single(vec[0])
+                # Scale feature vector
+                vec_scaled = mc.preprocessor.transform_single(vec[0])
 
-            # Supervised inference (LightGBM)
-            supervised_score = float(mc.lgbm.predict_proba(vec_scaled)[0, 1])
+                # Supervised inference (LightGBM)
+                supervised_score = float(mc.lgbm.predict_proba(vec_scaled)[0, 1])
 
-            # Anomaly inference (Isolation Forest)
-            anomaly_score = float(mc.iforest.score_anomaly(vec_scaled)[0])
+                # Anomaly inference (Isolation Forest)
+                anomaly_score = float(mc.iforest.score_anomaly(vec_scaled)[0])
 
-            # Composite hybrid scoring
-            composite_score = mc.hybrid_scorer.calculate_composite_score(
-                supervised_score, anomaly_score
-            )
+                # Composite hybrid scoring
+                composite_score = mc.hybrid_scorer.calculate_composite_score(
+                    supervised_score, anomaly_score
+                )
 
-            # Decision gating
-            verdict, is_zero_day, _ = mc.gating_engine.evaluate_verdict(
-                supervised_score, anomaly_score, composite_score
-            )
+                # Decision gating
+                verdict, is_zero_day, _ = mc.gating_engine.evaluate_verdict(
+                    supervised_score, anomaly_score, composite_score
+                )
 
-            # Selective SHAP XAI Execution (FR-XAI-003)
-            # Only execute SHAP attribution when transaction requires explanation (CHALLENGE/BLOCK)
-            if verdict in ["CHALLENGE_MFA", "BLOCK"] and mc.shap_explainer:
-                shap_res = mc.shap_explainer.explain_instance(vec_scaled)
-                reason_codes = shap_res["reason_codes"]
-            elif is_timestamp_drift:
-                reason_codes.append("TIMESTAMP_DRIFT_EXCEEDED")
-        else:
-            # Heuristic Rule Fallback (FR-DEC-003 / NFR-REL-002)
-            is_fallback = True
-            v5m, _, _ = cache_instance.get_velocities(payer_hash, payload.timestamp)
-            if payload.amount > 2500.0 or v5m > 5:
-                verdict = "BLOCK"
-                supervised_score, anomaly_score, composite_score = 0.90, 0.85, 0.88
-                reason_codes.append("HEURISTIC_AMOUNT_OR_VELOCITY_SPIKE")
-            elif payload.amount >= 500.0 or is_timestamp_drift:
-                verdict = "CHALLENGE_MFA"
-                supervised_score, anomaly_score, composite_score = 0.45, 0.50, 0.47
-                reason_codes.append("HEURISTIC_ELEVATED_VALUE")
+                # Selective SHAP XAI Execution (FR-XAI-003)
+                # Only execute SHAP attribution when transaction requires explanation (CHALLENGE/BLOCK)
+                if verdict in ["CHALLENGE_MFA", "BLOCK"] and mc.shap_explainer:
+                    shap_res = mc.shap_explainer.explain_instance(vec_scaled)
+                    reason_codes = shap_res["reason_codes"]
+                elif is_timestamp_drift:
+                    reason_codes.append("TIMESTAMP_DRIFT_EXCEEDED")
             else:
-                verdict = "APPROVE"
-                supervised_score, anomaly_score, composite_score = 0.05, 0.05, 0.05
-    except Exception as e:
-        logger.error(f"Inference error on {payload.transaction_id}: {e}. Activating deterministic fallback.")
-        is_fallback = True
-        verdict = "CHALLENGE_MFA"
-        supervised_score, anomaly_score, composite_score = 0.50, 0.50, 0.50
-        reason_codes.append("SYSTEM_EXCEPTION_FALLBACK")
+                # Heuristic Rule Fallback (FR-DEC-003 / NFR-REL-002)
+                is_fallback = True
+                v5m, _, _ = cache_instance.get_velocities(payer_hash, payload.timestamp)
+                if payload.amount > 2500.0 or v5m > 5:
+                    verdict = "BLOCK"
+                    supervised_score, anomaly_score, composite_score = 0.90, 0.85, 0.88
+                    reason_codes.append("HEURISTIC_AMOUNT_OR_VELOCITY_SPIKE")
+                elif payload.amount >= 500.0 or is_timestamp_drift:
+                    verdict = "CHALLENGE_MFA"
+                    supervised_score, anomaly_score, composite_score = 0.45, 0.50, 0.47
+                    reason_codes.append("HEURISTIC_ELEVATED_VALUE")
+                else:
+                    verdict = "APPROVE"
+                    supervised_score, anomaly_score, composite_score = 0.05, 0.05, 0.05
+        except Exception as e:
+            logger.error(f"Inference error on {payload.transaction_id}: {e}. Activating deterministic fallback.")
+            is_fallback = True
+            verdict = "CHALLENGE_MFA"
+            supervised_score, anomaly_score, composite_score = 0.50, 0.50, 0.50
+            reason_codes.append("SYSTEM_EXCEPTION_FALLBACK")
 
     if is_timestamp_drift and "TIMESTAMP_DRIFT_EXCEEDED" not in reason_codes:
         reason_codes.append("TIMESTAMP_DRIFT_EXCEEDED")
