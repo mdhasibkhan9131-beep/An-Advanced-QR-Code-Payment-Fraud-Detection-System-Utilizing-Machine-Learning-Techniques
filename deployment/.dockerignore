@@ -1,0 +1,23 @@
+# Docker build ignore rules
+.git/
+.gitignore
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+env/
+htmlcov/
+.coverage
+tests/
+docs/
+*.md
+!backend/models/.gitkeep
+!data/.gitkeep
+logs/*.log
+database/*.db-journal
+database/*.db-wal
+database/*.db-shm

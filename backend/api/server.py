@@ -27,6 +27,9 @@ async def lifespan(app: FastAPI):
     try:
         init_db()
         logger.info("Database schemas and SQLite WAL engine initialized.")
+        from backend.api.routes import get_model_container
+        get_model_container()
+        logger.info("Production ML models pre-warmed for immediate sub-100ms inference.")
     except Exception as e:
         logger.error(f"Critical error during database startup: {e}")
 

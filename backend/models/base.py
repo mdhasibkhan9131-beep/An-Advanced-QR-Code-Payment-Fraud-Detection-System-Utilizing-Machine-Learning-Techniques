@@ -59,3 +59,4 @@ class BaseAnomalyDetector(ABC):
     def load(self, filepath: str) -> "BaseAnomalyDetector":
         """Load serialized detector weights from disk."""
         pass
+

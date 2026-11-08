@@ -33,3 +33,4 @@ __all__ = [
     "DEFAULT_LIGHTGBM_PATH",
     "DEFAULT_IFOREST_PATH",
 ]
+

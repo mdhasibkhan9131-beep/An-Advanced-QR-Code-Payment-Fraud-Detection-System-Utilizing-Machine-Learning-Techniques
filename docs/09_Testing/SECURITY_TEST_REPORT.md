@@ -73,3 +73,4 @@ The assessment confirms zero critical vulnerabilities, zero SQL injection vector
 
 ### 3.4 PII Privacy Masking Audit (`TC-SEC-004`)
 - **Inspection:** Direct query of SQLite database `transactions` table confirmed that raw payer national identifiers never enter persistent storage. Plaintext strings are transformed into 64-character hex digests (`payer_hash`) via secret salt `settings.PII_SECRET_SALT`.
+

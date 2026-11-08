@@ -92,3 +92,4 @@ def test_ledger_tamper_detection(in_memory_db):
     assert tamper_audit["is_valid"] is False
     assert tamper_audit["tampered_block_id"] == 2
     assert tamper_audit["status"] == "PAYLOAD_TAMPERED"
+

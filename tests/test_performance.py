@@ -60,3 +60,4 @@ def test_sub_100ms_inference_sla(client):
 
     print(f"\n[Performance Test] P50: {p50:.2f}ms | P95: {p95:.2f}ms | Max: {max_latency:.2f}ms")
     assert p95 < 100.0, f"P95 latency exceeded 100ms SLA: {p95:.2f}ms"
+

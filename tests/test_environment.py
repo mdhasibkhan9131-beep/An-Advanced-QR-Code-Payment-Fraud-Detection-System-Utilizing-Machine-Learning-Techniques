@@ -41,7 +41,7 @@ def test_required_packages_importable():
 def test_settings_loaded():
     """Verify Pydantic settings are correctly initialized with defaults."""
     assert settings.PROJECT_NAME == "Advanced QR Code Payment Fraud Detection System"
-    assert settings.VERSION == "0.1.0"
+    assert settings.VERSION == "1.0.0"
     assert settings.WEIGHT_SUPERVISED == 0.70
     assert settings.WEIGHT_ANOMALY == 0.30
     assert settings.THRESHOLD_APPROVE == 0.30

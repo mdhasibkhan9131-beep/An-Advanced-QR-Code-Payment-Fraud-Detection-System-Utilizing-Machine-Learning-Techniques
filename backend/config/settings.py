@@ -22,9 +22,9 @@ class Settings(BaseSettings):
 
     # Application & Environment
     PROJECT_NAME: str = "Advanced QR Code Payment Fraud Detection System"
-    VERSION: str = "0.1.0"
-    ENVIRONMENT: Literal["development", "testing", "production"] = "development"
-    DEBUG: bool = True
+    VERSION: str = "1.0.0"
+    ENVIRONMENT: Literal["development", "testing", "production"] = "production"
+    DEBUG: bool = False
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
     SECRET_KEY: str = Field(default="dev_insecure_secret_key_change_in_production")

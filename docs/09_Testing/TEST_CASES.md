@@ -146,3 +146,4 @@
 | Test Case ID | Req Ref | Test Description & Inputs | Expected Result | Status |
 | :--- | :--- | :--- | :--- | :---: |
 | `TC-PRF-001` | `NFR-PERF-001`| 25 consecutive end-to-end transaction inferences at P95. | P95 latency strictly $< 100\text{ ms}$ (Actual: ~28.4 ms). | **PASS** |
+

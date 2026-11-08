@@ -66,3 +66,4 @@ def test_shap_attribution_latency_budget(trained_tree_explainer):
 
     avg_ms = float(np.mean(latencies))
     assert avg_ms < 40.0, f"SHAP latency exceeded 40 ms: {avg_ms:.2f} ms"
+

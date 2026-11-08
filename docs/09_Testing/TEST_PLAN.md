@@ -81,3 +81,4 @@ This Software Quality Assurance Test Plan establishes the rigorous, independent 
 - P95 transaction inference latency strictly $< 100\text{ ms}$.
 - Borderline-SMOTE oversampling strictly isolated from test folds.
 - Unbroken SHA-256 cryptographic chain validated across all evaluated transactions.
+

@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # ----------------------------------------------------------------------------
+  # Service 1: Real-Time Fraud Detection Inference API Gateway
+  # ----------------------------------------------------------------------------
+  api-gateway:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: qr-fraud-api-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - DEBUG=False
+      - APP_HOST=0.0.0.0
+      - APP_PORT=8000
+      - DATABASE_URL=sqlite:////app/database/fraud_detection.db
+      - CACHE_BACKEND=memory
+      - LOG_LEVEL=INFO
+    volumes:
+      - ../database:/app/database
+      - ../logs:/app/logs
+      - ../backend/models:/app/backend/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1536M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # ----------------------------------------------------------------------------
+  # Service 2: Interactive Real-Time Monitoring & Simulation Dashboard
+  # ----------------------------------------------------------------------------
+  monitoring-dashboard:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: qr-fraud-dashboard
+    restart: unless-stopped
+    command: ["streamlit", "run", "frontend/app.py", "--server.port=8501", "--server.address=0.0.0.0", "--server.headless=true"]
+    ports:
+      - "8501:8501"
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:////app/database/fraud_detection.db
+    volumes:
+      - ../database:/app/database
+      - ../logs:/app/logs
+      - ../backend/models:/app/backend/models
+      - ../research/benchmarks:/app/research/benchmarks
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+networks:
+  default:
+    name: qr-fraud-network

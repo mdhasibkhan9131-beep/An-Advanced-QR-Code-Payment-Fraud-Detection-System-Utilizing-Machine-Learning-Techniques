@@ -41,6 +41,11 @@ venv.bak/
 *.db
 *.db-wal
 *.db-shm
+*.db.gz
+*.db.gz.sha256
+database/backups/
+database/*.db*
+!database/.gitkeep
 
 # Unit test / coverage reports
 htmlcov/

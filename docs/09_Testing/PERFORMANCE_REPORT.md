@@ -80,3 +80,4 @@ Individual algorithm inference times measured across 100 consecutive single-inst
 - **CPU Utilization:** Profiling under sustained 50 req/sec load demonstrated ~18.5% total CPU utilization across 4 logical cores.
 - **RAM Footprint:** Stable at 220 MB to 260 MB, operating comfortably within commodity hardware bounds without memory leaks.
 - **Disk I/O:** Write-Ahead Logging (WAL mode) ensured zero read-lock contention during concurrent transaction ingestion.
+

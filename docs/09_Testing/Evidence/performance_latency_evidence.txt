@@ -44,3 +44,4 @@ STATISTICAL DISTRIBUTION SUMMARY:
 CONCLUSION:
 The observed P95 latency (20.30 ms) is well below the 100.0 ms threshold, providing an 79.7% performance safety margin. Meets NFR-PERF-001.
 ================================================================================
+

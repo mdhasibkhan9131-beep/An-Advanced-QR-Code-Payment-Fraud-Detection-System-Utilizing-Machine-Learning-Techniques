@@ -136,3 +136,4 @@ def test_decision_gating_engine():
     v4, z4, _ = gating.evaluate_verdict(supervised_score=0.05, anomaly_score=0.85, composite_score=0.29)
     assert v4 == "CHALLENGE_MFA"
     assert z4 is True
+
