@@ -109,3 +109,4 @@ def test_generator_throughput():
 
     assert len(df) == 1000
     assert elapsed < 1.0  # Fast generation performance
+

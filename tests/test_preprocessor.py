@@ -133,3 +133,4 @@ def test_error_handling_invalid_columns():
     preprocessor = DataPreprocessor()
     with pytest.raises(ValueError, match="DataFrame is missing required feature columns"):
         preprocessor.prepare_features_and_labels(bad_df)
+

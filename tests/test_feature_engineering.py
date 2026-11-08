@@ -106,3 +106,4 @@ def test_feature_pipeline_extraction():
     assert feat_dict["haversine_distance_km"] < 0.2  # Very close coordinates
     assert feat_dict["device_trust_score"] == 0.95
     assert feat_dict["scan_to_pay_latency_ms"] == 4200
+
