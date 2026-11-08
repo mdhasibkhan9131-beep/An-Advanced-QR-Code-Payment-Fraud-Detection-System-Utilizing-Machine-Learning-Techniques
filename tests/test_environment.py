@@ -47,3 +47,4 @@ def test_settings_loaded():
     assert settings.THRESHOLD_APPROVE == 0.30
     assert settings.THRESHOLD_BLOCK == 0.70
     assert settings.TIMEOUT_CIRCUIT_BREAKER_MS == 120
+

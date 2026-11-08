@@ -68,3 +68,7 @@ class InMemoryTTLCache(StateCacheInterface):
 
 # Global in-memory cache instance
 cache_instance = InMemoryTTLCache()
+
+# Alias for backwards/interface naming compatibility
+InMemoryStateCache = InMemoryTTLCache
+

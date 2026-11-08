@@ -108,3 +108,4 @@ class AuditEvent(Base):
     target_block_id = Column(Integer, nullable=True)
     performed_by = Column(String(32), default="SYSTEM", nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+

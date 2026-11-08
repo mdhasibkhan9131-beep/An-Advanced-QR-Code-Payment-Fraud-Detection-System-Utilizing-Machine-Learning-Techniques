@@ -91,26 +91,38 @@ async def predict_fraud(payload: TransactionRequest):
     # 3. Retrieve rolling velocities
     v5m, v1h, v24h = cache_instance.get_velocities(payer_hash, payload.timestamp)
 
-    # 4. Foundation baseline scoring logic (Sprint 1 baseline)
+    # 4. Timestamp Drift & Freshness Validation (PBI-002 / FR-ING-002)
+    current_time_ms = int(time.time() * 1000)
+    drift_ms = abs(current_time_ms - payload.timestamp)
+    timestamp_anomaly = drift_ms > 300_000  # 300 seconds
+
+    # 5. Foundation baseline scoring logic (Sprint 1 baseline)
     # Full ML pipeline will be mounted in Sprint 3
     is_high_risk = payload.amount > 2500.0 or v5m > 5
-    is_challenge = 500.0 <= payload.amount <= 2500.0
+    is_challenge = (500.0 <= payload.amount <= 2500.0) or timestamp_anomaly
+
+    reasons = []
+    if timestamp_anomaly:
+        reasons.append("TIMESTAMP_DRIFT_EXCEEDED")
 
     if is_high_risk:
         verdict = "BLOCK"
         sup_score = 0.92
         ano_score = 0.88
-        reasons = ["AMOUNT_SPIKE_DETECTED"] if payload.amount > 2500 else ["VELOCITY_BURST_5M"]
+        if payload.amount > 2500:
+            reasons.append("AMOUNT_SPIKE_DETECTED")
+        if v5m > 5:
+            reasons.append("VELOCITY_BURST_5M")
     elif is_challenge:
         verdict = "CHALLENGE_MFA"
         sup_score = 0.48
         ano_score = 0.50
-        reasons = ["ELEVATED_TRANSACTION_VALUE"]
+        if 500.0 <= payload.amount <= 2500.0:
+            reasons.append("ELEVATED_TRANSACTION_VALUE")
     else:
         verdict = "APPROVE"
         sup_score = 0.04
         ano_score = 0.06
-        reasons = []
 
     comp_score = float(settings.WEIGHT_SUPERVISED * sup_score + settings.WEIGHT_ANOMALY * ano_score)
     exec_ms = round((time.perf_counter() - start_time) * 1000, 2)
@@ -128,3 +140,4 @@ async def predict_fraud(payload: TransactionRequest):
         response_time_ms=exec_ms,
         is_fallback=False
     )
+

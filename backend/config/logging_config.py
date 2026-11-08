@@ -49,3 +49,4 @@ def setup_logging() -> logging.Logger:
 
 # Global logger instance
 logger = setup_logging()
+

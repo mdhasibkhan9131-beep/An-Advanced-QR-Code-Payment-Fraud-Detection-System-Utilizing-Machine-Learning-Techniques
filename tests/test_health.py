@@ -30,3 +30,4 @@ async def test_metrics_endpoint(async_client):
     assert "latency_metrics" in data
     assert "accuracy_scoreboard" in data
     assert data["accuracy_scoreboard"]["recall"] >= 0.95
+

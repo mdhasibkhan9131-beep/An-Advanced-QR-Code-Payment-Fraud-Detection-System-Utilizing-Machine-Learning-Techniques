@@ -77,3 +77,19 @@ cover/
 
 # Streamlit Local Cache
 .streamlit/
+
+# Application Logs
+logs/*.log
+*.log
+
+# Data artifacts (keep folder structure)
+data/*.csv
+data/*.parquet
+!data/.gitkeep
+
+# Model weights and serialized scaler binaries
+backend/models/*.joblib
+backend/models/*.pt
+backend/models/*.pkl
+!backend/models/.gitkeep
+
