@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Sprint 2: Data Engineering, Contextual Features & Synthetic Generation**
+  - Implemented timestamp drift and freshness validation (`PBI-002` / `FR-ING-002`) guarding against replay attacks beyond +/-300s.
+  - Implemented Haversine great-circle spatial displacement calculation (`PBI-003` / `FR-FEA-001`) with domain clamp and symmetry tests.
+  - Implemented Shannon entropy analyzer (`PBI-004` / `FR-FEA-002`) detecting obfuscated and malicious QR payload redirects.
+  - Integrated in-memory sliding window rolling velocities ($V_{5\text{m}}, V_{1\text{h}}, V_{24\text{h}}$) and velocity ratios (`PBI-005` / `FR-FEA-003`).
+  - Implemented customer historical spending baseline Z-score calculator (`PBI-006` / `FR-FEA-004`) with zero-variance protection.
+  - Built `FeatureEngineeringPipeline` constructing standardized 16-dimensional tabular feature vectors.
+  - Implemented `SyntheticQRTransactionGenerator` (`PBI-007` / `FR-DAT-001`) reproducing acute class imbalance (0.80% fraud) across 4 distinct archetypes (Legitimate baseline, Static Sticker Quishing, Dynamic MITM Amount Surge, High-Velocity Credential Bot Probe).
+  - Built `DataPreprocessor` (`PBI-008` / `FR-DAT-003`) enforcing strict split isolation: RobustScaler fitted strictly on training partition, and Borderline-SMOTE / SMOTE applied strictly to training folds while leaving validation and test sets pristine.
+  - Added comprehensive automated test suites (`tests/test_feature_engineering.py`, `tests/test_generator.py`, `tests/test_preprocessor.py`), expanding test coverage to **31/31 tests passing (100%)**.
 - **Phase 07: Development Environment & Foundation Initialized (Sprint 1 Foundation)**
   - Initialized Git version control repository with `.gitignore` and committed initial foundation codebase.
   - Installed all required scientific and ML dependencies (`lightgbm`, `imbalanced-learn`, `shap`, `streamlit`, `pyod`, `pydantic-settings`, `pytest-asyncio`).
