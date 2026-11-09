@@ -144,3 +144,4 @@ class KagglePaySimAdapter:
         os.makedirs(os.path.dirname(output_csv_path), exist_ok=True)
         df_adapted.to_csv(output_csv_path, index=False)
         return output_csv_path
+
