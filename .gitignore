@@ -80,8 +80,9 @@ cover/
 *.key
 *.cert
 
-# Streamlit Local Cache
-.streamlit/
+# Streamlit Local Cache (Track production config, ignore cache)
+.streamlit/*
+!.streamlit/config.toml
 
 # Application Logs
 logs/*.log
@@ -92,9 +93,9 @@ data/*.csv
 data/*.parquet
 !data/.gitkeep
 
-# Model weights and serialized scaler binaries
-backend/models/*.joblib
+# Model weights and serialized scaler binaries (Track production pre-trained models)
 backend/models/*.pt
 backend/models/*.pkl
+!backend/models/*.joblib
 !backend/models/.gitkeep
 

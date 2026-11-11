@@ -456,7 +456,7 @@ st.html(f"""
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
 
-    /* Complete removal of Streamlit branding, header, toolbar, runner status, deploy button, and 3-dots menu */
+    /* Complete removal of Streamlit branding, header, toolbar, runner status, deploy button, 3-dots menu, and AI error helper dialogs */
     header[data-testid="stHeader"],
     [data-testid="stHeader"],
     [data-testid="stToolbar"],
@@ -469,7 +469,13 @@ st.html(f"""
     section[data-testid="stSidebar"],
     button[kind="header"],
     [data-testid="stDecoration"],
-    footer {
+    footer,
+    [data-testid="stException"],
+    .stException,
+    [data-testid="stExceptionPrompt"],
+    div[data-testid="stNotification"],
+    div[class*="stException"],
+    div:has(> [data-testid="stException"]) {{
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
@@ -479,7 +485,7 @@ st.html(f"""
         overflow: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
-    }
+    }}
 
     .block-container {{
         padding-top: 1.0rem !important;

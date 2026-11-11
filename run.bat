@@ -9,12 +9,21 @@ echo.
 
 cd /d "%~dp0"
 
-:: 1. Auto-check setup
+:: 1. Auto-check setup & dependencies
+set NEED_SETUP=0
 if not exist ".venv\Scripts\activate.bat" (
-    echo [INFO] First-time setup detected. Running setup.bat automatically...
+    set NEED_SETUP=1
+) else (
+    call .venv\Scripts\activate.bat
+    python -c "import streamlit, uvicorn" >nul 2>&1
+    if errorlevel 1 set NEED_SETUP=1
+)
+
+if "%NEED_SETUP%"=="1" (
+    echo [INFO] Virtual environment or packages missing. Running setup.bat...
     echo.
     call setup.bat
-    if %errorlevel% neq 0 (
+    if errorlevel 1 (
         echo [ERROR] Setup failed. Cannot start application.
         pause
         exit /b 1
@@ -49,6 +58,11 @@ echo ===========================================================================
 echo.
 
 python -m streamlit run frontend/app.py --server.port 8501 --server.headless false
+if errorlevel 1 (
+    echo.
+    echo [ERROR] Streamlit encountered an issue or was terminated unexpectedly.
+    pause
+)
 
 :: 6. Clean up backend when frontend is closed
 echo.

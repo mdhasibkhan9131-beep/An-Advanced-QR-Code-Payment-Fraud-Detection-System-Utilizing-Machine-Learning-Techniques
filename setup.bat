@@ -56,7 +56,11 @@ if not exist ".streamlit\config.toml" (
     (
         echo [client]
         echo toolbarMode = "minimal"
-        echo showErrorDetails = false
+        echo showErrorDetails = "none"
+        echo showErrorLinks = false
+        echo.
+        echo [browser]
+        echo gatherUsageStats = false
         echo.
         echo [ui]
         echo hideTopBar = true
@@ -84,7 +88,7 @@ echo.
 echo [3/6] Configuring virtual environment (.venv)...
 if not exist ".venv\Scripts\activate.bat" (
     echo [INFO] Creating new virtual environment in .venv ...
-    %PYTHON_CMD% -m venv .venv
+    %PYTHON_CMD% -m venv --system-site-packages .venv
     if %errorlevel% neq 0 (
         color 0C
         echo [ERROR] Failed to create virtual environment.
@@ -100,13 +104,14 @@ echo.
 :: 4. Activate venv and install dependencies
 echo [4/6] Installing dependencies from requirements.txt...
 call .venv\Scripts\activate.bat
-python -m pip install --upgrade pip --quiet
-python -m pip install -r requirements.txt --quiet
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 if %errorlevel% neq 0 (
     color 0E
     echo [WARNING] Some dependencies had warnings during install. Retrying in normal mode...
     python -m pip install -r requirements.txt
 )
+python -m pip install --upgrade pydantic
 echo [OK] Dependencies installed and verified.
 echo.
 
@@ -122,7 +127,12 @@ echo.
 
 :: 6. Check / Train Machine Learning Models
 echo [6/6] Checking serialized Machine Learning models...
-if not exist "backend\models\lightgbm_model.joblib" (
+set NEED_MODEL_TRAIN=0
+if not exist "backend\models\lightgbm_model.joblib" set NEED_MODEL_TRAIN=1
+if not exist "backend\models\isolation_forest.joblib" set NEED_MODEL_TRAIN=1
+if not exist "backend\models\scaler.joblib" set NEED_MODEL_TRAIN=1
+
+if "!NEED_MODEL_TRAIN!"=="1" (
     echo [INFO] Production models not found. Training models now (approx 10-15s)...
     python -m backend.models.trainer
     echo [OK] Models trained and serialized to backend/models/
