@@ -111,7 +111,6 @@ echo ===========================================================================
 echo.
 echo You can run the application anytime using:
 echo    - run.bat   (Starts both Backend and Frontend and opens Browser)
-echo    - stop.bat  (Stops running background servers)
 echo.
 
 set /p START_NOW="Do you want to launch the system right now? (Y/N): "
