@@ -1,0 +1,68 @@
+[
+  {
+    "Model":"Logistic Regression",
+    "Accuracy":1.0,
+    "Precision":1.0,
+    "Recall":1.0,
+    "Specificity":1.0,
+    "F1-Score":1.0,
+    "ROC-AUC":1.0,
+    "PR-AUC":1.0,
+    "Inference_Latency_ms":0.0
+  },
+  {
+    "Model":"Random Forest",
+    "Accuracy":1.0,
+    "Precision":1.0,
+    "Recall":1.0,
+    "Specificity":1.0,
+    "F1-Score":1.0,
+    "ROC-AUC":1.0,
+    "PR-AUC":1.0,
+    "Inference_Latency_ms":0.0282999674
+  },
+  {
+    "Model":"LightGBM",
+    "Accuracy":0.9993333333,
+    "Precision":0.9230769231,
+    "Recall":1.0,
+    "Specificity":0.999327957,
+    "F1-Score":0.96,
+    "ROC-AUC":0.9999439964,
+    "PR-AUC":0.9935897436,
+    "Inference_Latency_ms":0.0013300578
+  },
+  {
+    "Model":"Multilayer Perceptron (MLP)",
+    "Accuracy":1.0,
+    "Precision":1.0,
+    "Recall":1.0,
+    "Specificity":1.0,
+    "F1-Score":1.0,
+    "ROC-AUC":1.0,
+    "PR-AUC":1.0,
+    "Inference_Latency_ms":0.0013303757
+  },
+  {
+    "Model":"LightGBM (Tuned)",
+    "Accuracy":1.0,
+    "Precision":1.0,
+    "Recall":1.0,
+    "Specificity":1.0,
+    "F1-Score":1.0,
+    "ROC-AUC":1.0,
+    "PR-AUC":1.0,
+    "Inference_Latency_ms":0.0033241908
+  },
+  {
+    "Model":"XGBoost",
+    "Accuracy":0.9986666667,
+    "Precision":0.9166666667,
+    "Recall":0.9166666667,
+    "Specificity":0.999327957,
+    "F1-Score":0.9166666667,
+    "ROC-AUC":0.9980958781,
+    "PR-AUC":0.9319444444,
+    "Inference_Latency_ms":0.0013295809
+  }
+]

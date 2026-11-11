@@ -107,6 +107,10 @@ advanced-qr-code-payment-fraud-detection-system/
 
 ## 4. Quickstart & Deployment Guide
 
+### 4.0 One-Click Portable Setup on Windows (Fastest)
+1. **First-Time Setup:** Double-click `setup.bat` (automatically configures `.venv`, installs dependencies, and initializes SQLite database).
+2. **Launch Platform:** Double-click `run.bat` (starts FastAPI on `:8000` and launches Streamlit dashboard on `http://localhost:8501` in your browser).
+
 ### 4.1 Running with Docker Compose (Recommended)
 ```bash
 # 1. Clone and enter directory
