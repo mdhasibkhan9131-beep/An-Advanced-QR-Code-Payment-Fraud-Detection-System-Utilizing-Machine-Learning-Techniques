@@ -475,13 +475,7 @@ st.html(f"""
     section[data-testid="stSidebar"],
     button[kind="header"],
     [data-testid="stDecoration"],
-    footer,
-    [data-testid="stException"],
-    .stException,
-    [data-testid="stExceptionPrompt"],
-    div[data-testid="stNotification"],
-    div[class*="stException"],
-    div:has(> [data-testid="stException"]) {{
+    footer {{
         display: none !important;
         visibility: hidden !important;
         height: 0px !important;
@@ -1012,40 +1006,43 @@ scaler, lgbm, iforest, hybrid_scorer, gating_engine = load_ml_components()
 # -------------------------------------------------------------
 @st.cache_data(ttl=2)
 def fetch_telemetry_summary():
-    db = SessionLocal()
     total_tx = 0
     blocks_count = 0
     challenge_count = 0
     approve_count = 0
     recent_tx_records = []
     try:
-        from sqlalchemy import func
-        counts = db.query(TransactionRecord.verdict, func.count(TransactionRecord.id)).group_by(TransactionRecord.verdict).all()
-        cmap = {v: c for v, c in counts}
-        total_tx = sum(cmap.values())
-        blocks_count = cmap.get("BLOCK", 0)
-        challenge_count = cmap.get("CHALLENGE_MFA", 0)
-        approve_count = cmap.get("APPROVE", 0)
+        db = SessionLocal()
+        try:
+            from sqlalchemy import func
+            counts = db.query(TransactionRecord.verdict, func.count(TransactionRecord.transaction_id)).group_by(TransactionRecord.verdict).all()
+            cmap = {v: c for v, c in counts}
+            total_tx = sum(cmap.values())
+            blocks_count = cmap.get("BLOCK", 0)
+            challenge_count = cmap.get("CHALLENGE_MFA", 0)
+            approve_count = cmap.get("APPROVE", 0)
 
-        recent_txs = (
-            db.query(TransactionRecord)
-            .order_by(TransactionRecord.timestamp.desc())
-            .limit(12)
-            .all()
-        )
-        if recent_txs:
-            for r in recent_txs:
-                recent_tx_records.append({
-                    "Tx ID": r.transaction_id[:14] + "...",
-                    "Payer Hash": r.payer_hash[:12] + "...",
-                    "Amount": f"৳{r.amount:,.2f}",
-                    "Supervised": f"{r.supervised_score:.3f}",
-                    "Anomaly": f"{r.anomaly_score:.3f}",
-                    "Composite": f"{r.composite_score:.3f}",
-                    "Verdict": r.verdict,
-                })
-    finally:
-        db.close()
+            recent_txs = (
+                db.query(TransactionRecord)
+                .order_by(TransactionRecord.timestamp.desc())
+                .limit(12)
+                .all()
+            )
+            if recent_txs:
+                for r in recent_txs:
+                    recent_tx_records.append({
+                        "Tx ID": r.transaction_id[:14] + "...",
+                        "Payer Hash": r.payer_hash[:12] + "...",
+                        "Amount": f"৳{r.amount:,.2f}",
+                        "Supervised": f"{r.supervised_score:.3f}",
+                        "Anomaly": f"{r.anomaly_score:.3f}",
+                        "Composite": f"{r.composite_score:.3f}",
+                        "Verdict": r.verdict,
+                    })
+        finally:
+            db.close()
+    except Exception:
+        pass
     return total_tx, blocks_count, challenge_count, approve_count, recent_tx_records
 
 
