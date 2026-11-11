@@ -1744,8 +1744,11 @@ def render_simulator_section():
         # Save to Database & Cryptographic Audit Ledger
         db_session = SessionLocal()
         now_ts = int(time.time() * 1000)
-        tx_id = f"sim-{now_ts}"
+        import uuid
+        tx_code = uuid.uuid4().hex[:6].upper()
+        tx_id = f"TXN-{(now_ts % 900000) + 100000}-{tx_code}"
         block_hash_val = "GENESIS_PENDING"
+        block_id_val = 1
         try:
             rec = TransactionRecord(
                 transaction_id=tx_id,
@@ -1786,6 +1789,7 @@ def render_simulator_section():
             )
             db_session.commit()
             block_hash_val = str(block.block_hash) if block and hasattr(block, "block_hash") else "RECORDED"
+            block_id_val = getattr(block, "block_id", 1)
             fetch_telemetry_summary.clear()
         finally:
             db_session.close()
@@ -1837,9 +1841,27 @@ def render_simulator_section():
             </div>
             """)
 
+        block_hash_short = f"{block_hash_val[:10]}...{block_hash_val[-6:]}"
         st.html(f"""
-        <div style="margin-top: 10px; padding: 10px 14px; background: {card_bg}; border: 1px solid {border_color}; border-radius: 8px; font-size: 12px; color: {body_color};">
-            🔗 <strong>Audit Ledger Chained:</strong> Block Hash: <span class="mono-tag">{block_hash_val[:32]}...</span> | Tx ID: <span class="mono-tag">{tx_id}</span>
+        <div style="margin-top: 12px; padding: 12px 18px; background: {card_bg}; border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #34d399; font-size: 13px;">
+                    <span>🔗</span> Cryptographic Audit Ledger Chained
+                </span>
+                <span style="background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 6px; padding: 2px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #a5b4fc; font-weight: 700;">
+                    📦 Block #{block_id_val}
+                </span>
+                <span style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 6px; padding: 2px 8px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #6ee7b7; font-weight: 600;">
+                    💳 Tx Ref: {tx_id}
+                </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11.5px; color: #94a3b8;">SHA-256 Hash:</span>
+                <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #cbd5e1; background: rgba(255, 255, 255, 0.05); padding: 2px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08);">
+                    {block_hash_short}
+                </span>
+                <span style="font-size: 11px; color: #10b981; font-weight: 600;">✓ Tamper-Evident</span>
+            </div>
         </div>
         """)
 
