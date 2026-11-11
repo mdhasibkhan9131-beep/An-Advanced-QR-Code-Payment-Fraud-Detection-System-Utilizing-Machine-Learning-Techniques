@@ -456,19 +456,30 @@ st.html(f"""
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     }}
 
+    /* Complete removal of Streamlit branding, header, toolbar, runner status, deploy button, and 3-dots menu */
+    header[data-testid="stHeader"],
+    [data-testid="stHeader"],
+    [data-testid="stToolbar"],
+    [data-testid="stStatusWidget"],
+    .stDeployButton,
+    button[title="View app in Streamlit Community Cloud"],
+    #MainMenu,
     [data-testid="stSidebar"], 
     [data-testid="stSidebarCollapsedControl"], 
     section[data-testid="stSidebar"],
     button[kind="header"],
     [data-testid="stDecoration"],
-    footer {{
+    footer {
         display: none !important;
         visibility: hidden !important;
-    }}
-
-    header[data-testid="stHeader"] {{
-        background: transparent !important;
-    }}
+        height: 0px !important;
+        min-height: 0px !important;
+        max-height: 0px !important;
+        width: 0px !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+    }
 
     .block-container {{
         padding-top: 1.0rem !important;
@@ -797,6 +808,24 @@ st.html(f"""
 
     {theme_specific_css}
 </style>
+<script>
+    (function enforceCustomBranding() {{
+        const TITLE = "QR Fraud Shield | Autonomous ML Engine";
+        document.title = TITLE;
+        
+        let link = document.querySelector("link[rel*='icon']") || document.createElement('link');
+        link.type = 'image/svg+xml';
+        link.rel = 'shortcut icon';
+        link.href = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>';
+        document.head.appendChild(link);
+
+        setInterval(function() {{
+            if (document.title !== TITLE) {{
+                document.title = TITLE;
+            }}
+        }}, 300);
+    }})();
+</script>
 """)
 
 

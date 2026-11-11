@@ -38,8 +38,8 @@ for /f "tokens=*" %%v in ('%PYTHON_CMD% --version') do set PY_VER=%%v
 echo [OK] Found %PY_VER% (%PYTHON_CMD%)
 echo.
 
-:: 2. Check and copy .env if missing
-echo [2/6] Checking environment configuration (.env)...
+:: 2. Check and copy .env and .streamlit configuration if missing
+echo [2/6] Checking environment configuration (.env and .streamlit)...
 if not exist ".env" (
     if exist ".env.example" (
         copy ".env.example" ".env" >nul
@@ -49,6 +49,34 @@ if not exist ".env" (
     )
 ) else (
     echo [OK] .env configuration exists.
+)
+
+if not exist ".streamlit\config.toml" (
+    mkdir .streamlit 2>nul
+    (
+        echo [client]
+        echo toolbarMode = "minimal"
+        echo showErrorDetails = false
+        echo.
+        echo [ui]
+        echo hideTopBar = true
+        echo.
+        echo [theme]
+        echo base = "dark"
+        echo primaryColor = "#6366f1"
+        echo backgroundColor = "#080c14"
+        echo secondaryBackgroundColor = "#0f172a"
+        echo textColor = "#f1f5f9"
+        echo font = "sans serif"
+        echo.
+        echo [server]
+        echo headless = true
+        echo enableCORS = false
+        echo enableXsrfProtection = false
+    ) > .streamlit\config.toml
+    echo [OK] Configured clean UI in .streamlit/config.toml
+) else (
+    echo [OK] .streamlit configuration exists.
 )
 echo.
 
