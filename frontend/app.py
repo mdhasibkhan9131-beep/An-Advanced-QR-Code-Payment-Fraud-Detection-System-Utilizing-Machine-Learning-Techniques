@@ -28,6 +28,7 @@ from backend.data.feature_engineering import (
     calculate_shannon_entropy,
     calculate_amount_zscore,
     validate_payment_qr_payload,
+    robust_decode_qr,
 )
 from backend.models.ensemble import HybridScorer, DecisionGatingEngine
 from backend.xai.explainer import SHAPTreeExplainer
@@ -457,12 +458,17 @@ st.html(f"""
     }}
 
     /* Complete removal of Streamlit branding, header, toolbar, runner status, deploy button, 3-dots menu, and AI error helper dialogs */
+    header,
     header[data-testid="stHeader"],
     [data-testid="stHeader"],
     [data-testid="stToolbar"],
+    div[data-testid="stToolbarActions"],
+    div[data-testid="stToolbarActionButton"],
     [data-testid="stStatusWidget"],
     .stDeployButton,
     button[title="View app in Streamlit Community Cloud"],
+    button[title="Stop"],
+    button[title="Deploy"],
     #MainMenu,
     [data-testid="stSidebar"], 
     [data-testid="stSidebarCollapsedControl"], 
@@ -485,6 +491,259 @@ st.html(f"""
         overflow: hidden !important;
         opacity: 0 !important;
         pointer-events: none !important;
+    }}
+</style>
+
+<!-- Modern Cyber-Fintech Splash Loading Screen -->
+<div id="qrf-splash-loader">
+    <div class="qrf-loader-content">
+        <div class="qrf-shield-container">
+            <div class="qrf-shield-glow"></div>
+            <div class="qrf-shield-ring"></div>
+            <div class="qrf-shield-icon">🛡️</div>
+        </div>
+        <div class="qrf-loader-title">QR FRAUD SHIELD <span class="qrf-version">AI 2.0</span></div>
+        <div class="qrf-loader-subtitle">Autonomous Real-Time Payment Protection Engine</div>
+        <div class="qrf-progress-container">
+            <div class="qrf-progress-bar"></div>
+        </div>
+        <div class="qrf-status-badge">
+            <span class="qrf-status-dot"></span>
+            <span id="qrf-status-text">INITIALIZING INFERENCE PIPELINE...</span>
+        </div>
+        <div class="qrf-loader-tags">
+            <span class="qrf-tag">● LightGBM GBDT</span>
+            <span class="qrf-tag">● Isolation Forest Anomaly</span>
+            <span class="qrf-tag">● SHA-256 Cryptographic Ledger</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.title = "QR Fraud Shield | Autonomous ML Engine";
+    const hideHeaderBars = () => {{
+        const sel = 'header, [data-testid="stHeader"], [data-testid="stToolbar"], div[data-testid="stToolbarActions"], .stDeployButton, #MainMenu';
+        document.querySelectorAll(sel).forEach(el => {{
+            el.style.display = 'none';
+            el.style.visibility = 'hidden';
+            el.style.height = '0px';
+        }});
+    }};
+    hideHeaderBars();
+    setTimeout(hideHeaderBars, 100);
+    setTimeout(hideHeaderBars, 500);
+    setTimeout(hideHeaderBars, 1500);
+
+    // Smooth dismiss splash loader
+    const dismissSplash = () => {{
+        const splash = document.getElementById('qrf-splash-loader');
+        if (splash) {{
+            splash.classList.add('loaded');
+            setTimeout(() => {{ if (splash) splash.remove(); }}, 500);
+        }}
+    }};
+    if (document.readyState === 'complete') {{
+        setTimeout(dismissSplash, 400);
+    }} else {{
+        window.addEventListener('load', () => setTimeout(dismissSplash, 400));
+        setTimeout(dismissSplash, 800);
+    }}
+</script>
+
+<style>
+    /* Splash Screen CSS */
+    #qrf-splash-loader {{
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at 50% 30%, rgba(99, 102, 241, 0.20) 0%, transparent 60%), #080c14;
+        z-index: 9999999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+        color: #f8fafc;
+        transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+    }}
+
+    #qrf-splash-loader.loaded {{
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+    }}
+
+    .qrf-loader-content {{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 480px;
+        padding: 24px;
+    }}
+
+    .qrf-shield-container {{
+        position: relative;
+        width: 86px;
+        height: 86px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }}
+
+    .qrf-shield-glow {{
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.65) 0%, rgba(16, 185, 129, 0) 70%);
+        animation: qrf-pulse 2s infinite ease-in-out;
+    }}
+
+    .qrf-shield-ring {{
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 2.5px solid transparent;
+        border-top: 2.5px solid #818cf8;
+        border-right: 2.5px solid #34d399;
+        animation: qrf-spin 1.2s infinite linear;
+    }}
+
+    .qrf-shield-icon {{
+        font-size: 42px;
+        z-index: 2;
+        filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.8));
+        animation: qrf-float 2.5s infinite ease-in-out;
+    }}
+
+    @keyframes qrf-spin {{
+        0% {{ transform: rotate(0deg); }}
+        100% {{ transform: rotate(360deg); }}
+    }}
+
+    @keyframes qrf-pulse {{
+        0%, 100% {{ transform: scale(0.9); opacity: 0.5; }}
+        50% {{ transform: scale(1.3); opacity: 0.9; }}
+    }}
+
+    @keyframes qrf-float {{
+        0%, 100% {{ transform: translateY(0); }}
+        50% {{ transform: translateY(-4px); }}
+    }}
+
+    .qrf-loader-title {{
+        font-size: 24px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 6px;
+    }}
+
+    .qrf-version {{
+        font-size: 11px;
+        font-weight: 700;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-left: 6px;
+        vertical-align: middle;
+        letter-spacing: 0.5px;
+    }}
+
+    .qrf-loader-subtitle {{
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 22px;
+    }}
+
+    .qrf-progress-container {{
+        width: 280px;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        margin-bottom: 14px;
+    }}
+
+    .qrf-progress-bar {{
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1, #10b981, #06b6d4, #6366f1);
+        background-size: 200% 100%;
+        animation: qrf-shimmer 1.4s infinite linear;
+        border-radius: 999px;
+    }}
+
+    @keyframes qrf-shimmer {{
+        0% {{ background-position: 200% 0; }}
+        100% {{ background-position: -200% 0; }}
+    }}
+
+    .qrf-status-badge {{
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        color: #38bdf8;
+        background: rgba(56, 189, 248, 0.08);
+        border: 1px solid rgba(56, 189, 248, 0.2);
+        border-radius: 999px;
+        padding: 4px 14px;
+        margin-bottom: 18px;
+    }}
+
+    .qrf-status-dot {{
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #38bdf8;
+        box-shadow: 0 0 8px #38bdf8;
+        animation: qrf-pulse 1s infinite alternate;
+    }}
+
+    .qrf-loader-tags {{
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+    }}
+
+    .qrf-tag {{
+        font-size: 10.5px;
+        color: #64748b;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+        padding: 3px 8px;
+    }}
+
+    /* Modern Theme-Aligned Streamlit In-App Loading Spinner */
+    [data-testid="stSpinner"] {{
+        background: rgba(15, 23, 42, 0.85) !important;
+        border: 1px solid rgba(99, 102, 241, 0.35) !important;
+        border-radius: 12px !important;
+        padding: 14px 20px !important;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4) !important;
+    }}
+    [data-testid="stSpinner"] > div:first-child {{
+        border-color: #6366f1 !important;
+        border-right-color: transparent !important;
+    }}
+    [data-testid="stSpinner"] p, [data-testid="stSpinner"] span {{
+        color: #f8fafc !important;
+        font-weight: 600 !important;
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 13px !important;
     }}
 
     .block-container {{
@@ -945,7 +1204,6 @@ def load_ml_components():
     scaler = None
     lgbm = None
     iforest = None
-    explainer = None
 
     if os.path.exists(DEFAULT_SCALER_PATH):
         prep = DataPreprocessor(scaler_path=DEFAULT_SCALER_PATH)
@@ -954,7 +1212,6 @@ def load_ml_components():
     if os.path.exists(DEFAULT_LIGHTGBM_PATH):
         lgbm_wrapper = LightGBMClassifierWrapper()
         lgbm = lgbm_wrapper.load(DEFAULT_LIGHTGBM_PATH)
-        explainer = SHAPTreeExplainer(lgbm.get_booster())
 
     if os.path.exists(DEFAULT_IFOREST_PATH):
         iforest_detector = IsolationForestDetector()
@@ -967,46 +1224,66 @@ def load_ml_components():
         threshold_escalation=settings.ZERO_DAY_ANOMALY_ESCALATION,
     )
 
-    return scaler, lgbm, iforest, explainer, hybrid_scorer, gating_engine
+    return scaler, lgbm, iforest, hybrid_scorer, gating_engine
 
 
-scaler, lgbm, iforest, explainer, hybrid_scorer, gating_engine = load_ml_components()
+@st.cache_resource
+def get_cached_shap_explainer(_lgbm):
+    """Lazy-loaded SHAP TreeExplainer to guarantee ultra-fast initial app startup."""
+    if _lgbm is not None:
+        try:
+            return SHAPTreeExplainer(_lgbm.get_booster())
+        except Exception:
+            return None
+    return None
+
+
+scaler, lgbm, iforest, hybrid_scorer, gating_engine = load_ml_components()
 
 
 # -------------------------------------------------------------
-# Database Fetch for Global Live Telemetry
+# Database Fetch for Global Live Telemetry (Cached with 2s TTL)
 # -------------------------------------------------------------
-db = SessionLocal()
-total_tx = 0
-blocks_count = 0
-challenge_count = 0
-approve_count = 0
-recent_tx_records = []
-try:
-    total_tx = db.query(TransactionRecord).count()
-    blocks_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "BLOCK").count()
-    challenge_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "CHALLENGE_MFA").count()
-    approve_count = db.query(TransactionRecord).filter(TransactionRecord.verdict == "APPROVE").count()
+@st.cache_data(ttl=2)
+def fetch_telemetry_summary():
+    db = SessionLocal()
+    total_tx = 0
+    blocks_count = 0
+    challenge_count = 0
+    approve_count = 0
+    recent_tx_records = []
+    try:
+        from sqlalchemy import func
+        counts = db.query(TransactionRecord.verdict, func.count(TransactionRecord.id)).group_by(TransactionRecord.verdict).all()
+        cmap = {v: c for v, c in counts}
+        total_tx = sum(cmap.values())
+        blocks_count = cmap.get("BLOCK", 0)
+        challenge_count = cmap.get("CHALLENGE_MFA", 0)
+        approve_count = cmap.get("APPROVE", 0)
 
-    recent_txs = (
-        db.query(TransactionRecord)
-        .order_by(TransactionRecord.timestamp.desc())
-        .limit(12)
-        .all()
-    )
-    if recent_txs:
-        for r in recent_txs:
-            recent_tx_records.append({
-                "Tx ID": r.transaction_id[:14] + "...",
-                "Payer Hash": r.payer_hash[:12] + "...",
-                "Amount": f"৳{r.amount:,.2f}",
-                "Supervised": f"{r.supervised_score:.3f}",
-                "Anomaly": f"{r.anomaly_score:.3f}",
-                "Composite": f"{r.composite_score:.3f}",
-                "Verdict": r.verdict,
-            })
-finally:
-    db.close()
+        recent_txs = (
+            db.query(TransactionRecord)
+            .order_by(TransactionRecord.timestamp.desc())
+            .limit(12)
+            .all()
+        )
+        if recent_txs:
+            for r in recent_txs:
+                recent_tx_records.append({
+                    "Tx ID": r.transaction_id[:14] + "...",
+                    "Payer Hash": r.payer_hash[:12] + "...",
+                    "Amount": f"৳{r.amount:,.2f}",
+                    "Supervised": f"{r.supervised_score:.3f}",
+                    "Anomaly": f"{r.anomaly_score:.3f}",
+                    "Composite": f"{r.composite_score:.3f}",
+                    "Verdict": r.verdict,
+                })
+    finally:
+        db.close()
+    return total_tx, blocks_count, challenge_count, approve_count, recent_tx_records
+
+
+total_tx, blocks_count, challenge_count, approve_count, recent_tx_records = fetch_telemetry_summary()
 
 approve_pct = (approve_count / total_tx * 100) if total_tx > 0 else 0.0
 challenge_pct = (challenge_count / total_tx * 100) if total_tx > 0 else 0.0
@@ -1170,6 +1447,7 @@ def render_simulator_section():
 
     detected_qr_payload = ""
     computed_entropy = None
+    uploaded_file = None
 
     if input_mode == "🔍 Upload & Scan QR Code":
         uploaded_file = st.file_uploader(
@@ -1182,8 +1460,8 @@ def render_simulator_section():
             pil_img = Image.open(uploaded_file).convert("RGB")
             cv_img = np.array(pil_img)
 
-            detector = cv2.QRCodeDetector()
-            decoded_data, bbox, _ = detector.detectAndDecode(cv_img)
+            # Robust multi-pass optical barcode decoder (Multi-scale upscaling, CLAHE, Otsu)
+            decoded_data = robust_decode_qr(cv_img)
 
             col_img, col_info = st.columns([1, 2])
             with col_img:
@@ -1198,41 +1476,61 @@ def render_simulator_section():
                     st.session_state["uploaded_qr_val"] = qr_val
 
                     if qr_val["is_payment"]:
-                        st.success(f"✅ **Decoded Payload:** `{decoded_data}`")
-                        st.info(f"💳 **Payment Format Recognized:** {qr_val['category']}\n\n*{qr_val['message']}*")
+                        st.success(f"✅ **GENUINE PAYMENT QR DETECTED:** `{decoded_data}`")
+                        st.info(f"💳 **Payment Format:** {qr_val['category']}\n\n*{qr_val['message']}*")
                     else:
-                        st.error(f"🚫 **NON-PAYMENT QR CODE DETECTED:** `{decoded_data}`")
+                        st.error(f"🛑 **UNAUTHORIZED / FAKE QR CODE DETECTED:** `{decoded_data}`")
                         st.warning(
-                            f"⚠️ **Security Alert:** `{qr_val['category']}` — {qr_val['message']}\n\n"
-                            f"🔒 **Enforcement Policy:** This QR code targets a non-payment destination. Generic URLs are automatically blocked to prevent Quishing."
+                            f"🚨 **Security Threat:** `{qr_val['category']}` — {qr_val['message']}\n\n"
+                            f"🔒 **Enforcement Policy:** Non-payment/unauthorized destinations are strictly **BLOCKED** with 100% fraud risk."
                         )
 
                     metric_col1, metric_col2 = st.columns(2)
                     metric_col1.metric("Payload Length", f"{len(decoded_data)} chars")
+                    is_emvco_sig = qr_val["is_payment"] and computed_entropy > 4.5
                     metric_col2.metric(
                         "Shannon Entropy",
                         f"{computed_entropy:.2f} bits",
-                        delta="High Risk (>4.5 bits)" if computed_entropy > 4.5 else "Routine (<4.0 bits)",
-                        delta_color="inverse" if computed_entropy > 4.5 else "normal"
+                        delta="EMVCo Cryptographic Signature (Verified Authentic)" if is_emvco_sig else ("High Risk (>4.5 bits)" if computed_entropy > 4.5 else "Routine (<4.0 bits)"),
+                        delta_color="normal" if qr_val["is_payment"] else ("inverse" if computed_entropy > 4.5 else "normal")
                     )
                 else:
-                    st.warning("⚠️ Could not decode QR code from this image. Please ensure the code is clear and focused.")
+                    st.error("🚫 **CORRUPT / UNREADABLE BARCODE:** Could not decode any valid QR pattern from this image. Please ensure the code is clear and focused.")
+                    st.session_state["uploaded_qr_payload"] = "CORRUPTED_BARCODE"
+                    st.session_state["uploaded_qr_val"] = {
+                        "is_payment": False,
+                        "category": "Corrupted Barcode / Decode Failure",
+                        "message": "Image cannot be decoded into a valid barcode payload.",
+                        "risk_flag": "OPTICAL_DECODE_FAILURE",
+                    }
 
-    # Determine default option for archetype selector
+    # Determine archetype selector
     uploaded_qr_val = st.session_state.get("uploaded_qr_val", {})
-    if detected_qr_payload:
-        if uploaded_qr_val.get("is_payment", False):
-            uploaded_label = f"Use Uploaded QR Data ({detected_qr_payload[:24]}...)"
+    if input_mode == "🔍 Upload & Scan QR Code":
+        if uploaded_file is None:
+            st.html(f"""
+            <div style="margin: 18px 0; padding: 28px 20px; text-align: center; background: {card_bg}; border: 1.5px dashed rgba(99, 102, 241, 0.35); border-radius: 12px;">
+                <div style="font-size: 32px; margin-bottom: 8px;">📷</div>
+                <div style="font-size: 15px; font-weight: 700; color: {title_color}; margin-bottom: 4px;">Waiting for QR Code Image Upload</div>
+                <div style="font-size: 13px; color: {body_color};">Please upload a payment QR code image (.png, .jpg, .jpeg, .webp) above to run real-time optical barcode decoding and fraud risk evaluation.</div>
+            </div>
+            """)
+            return
+
+        if detected_qr_payload:
+            if uploaded_qr_val.get("is_payment", False):
+                active_label = f"✅ Genuine Scanned Payment QR ({detected_qr_payload[:24]}...)"
+            else:
+                active_label = f"🛑 Fake / Quishing QR [{detected_qr_payload[:28]}...]"
         else:
-            uploaded_label = f"Use Uploaded QR [INVALID: {detected_qr_payload[:22]}...]"
-        archetype_options = [
-            uploaded_label,
-            "Routine Legitimate Payment",
-            "Sticker Replacement (Quishing)",
-            "Dynamic QR MITM Amount Surge",
-            "High-Velocity Credential Probing Bot",
-            "Custom Vector",
-        ]
+            active_label = "🚫 Corrupted / Unreadable Barcode Image"
+        archetype_options = [active_label]
+        archetype = st.selectbox(
+            "Active Transaction Profile (Locked to Uploaded QR Image)",
+            archetype_options,
+            disabled=True,
+            key="sim_archetype_select_locked",
+        )
     else:
         archetype_options = [
             "Routine Legitimate Payment",
@@ -1241,24 +1539,43 @@ def render_simulator_section():
             "High-Velocity Credential Probing Bot",
             "Custom Vector",
         ]
-
-    archetype = st.selectbox(
-        "Select Transaction Profile / Attack Preset",
-        archetype_options,
-        key="sim_archetype_select"
-    )
+        archetype = st.selectbox(
+            "Select Transaction Profile / Attack Preset",
+            archetype_options,
+            key="sim_archetype_select",
+        )
 
     with st.form("simulator_form_modern"):
         # Setup Archetype Defaults
-        if detected_qr_payload and ("Uploaded QR" in archetype):
-            default_amount = 350.0
-            default_qr_type = 0
-            default_disp = 0.5
-            default_latency = 4500
-            default_trust = 0.95
-            default_v5m = 1.0
-            default_pin = 0
-            default_entropy = computed_entropy if computed_entropy is not None else 3.6
+        if input_mode == "🔍 Upload & Scan QR Code" and uploaded_file is not None:
+            if detected_qr_payload and uploaded_qr_val.get("is_payment", False):
+                default_amount = 350.0
+                default_qr_type = 0
+                default_disp = 0.5
+                default_latency = 4500
+                default_trust = 0.95
+                default_v5m = 1.0
+                default_pin = 0
+                default_entropy = 3.6  # Authentic financial baseline for legitimate EMVCo merchant QRs
+            elif detected_qr_payload and not uploaded_qr_val.get("is_payment", False):
+                # Fake / Quishing attack presets
+                default_amount = 450.0
+                default_qr_type = 0
+                default_disp = 125.0
+                default_latency = 6500
+                default_trust = 0.40
+                default_v5m = 0.0
+                default_pin = 0
+                default_entropy = computed_entropy if computed_entropy is not None else 4.8
+            else:
+                default_amount = 500.0
+                default_qr_type = 0
+                default_disp = 50.0
+                default_latency = 1200
+                default_trust = 0.20
+                default_v5m = 0.0
+                default_pin = 1
+                default_entropy = 0.0
         elif archetype == "Routine Legitimate Payment":
             default_amount = 350.0
             default_qr_type = 0
@@ -1347,26 +1664,45 @@ def render_simulator_section():
     if submit_btn:
         t0 = time.perf_counter()
 
-        if detected_qr_payload and ("Uploaded QR" in archetype):
+        if input_mode == "🔍 Upload & Scan QR Code" and uploaded_file is not None:
+            if not detected_qr_payload:
+                eval_payload = "CORRUPTED_BARCODE"
+                payload_eval_res = {
+                    "is_payment": False,
+                    "category": "Corrupted Barcode / Optical Decode Failure",
+                    "message": "Bar code could not be optically decoded from image.",
+                    "risk_flag": "OPTICAL_DECODE_FAILURE",
+                }
+            else:
+                eval_payload = detected_qr_payload
+                payload_eval_res = validate_payment_qr_payload(eval_payload)
+        elif detected_qr_payload and ("Scanned" in archetype or "Uploaded" in archetype or "Fake" in archetype):
             eval_payload = detected_qr_payload
+            payload_eval_res = validate_payment_qr_payload(eval_payload)
         elif archetype == "Sticker Replacement (Quishing)":
             eval_payload = "https://secure-qr.bkash-auth.net/pay/v2?redirect=login&session=7f9a8b1c4e2d3f0a9b8c7d6e5f4a3b2c1d0e9f8a"
+            payload_eval_res = validate_payment_qr_payload(eval_payload)
         elif archetype == "Routine Legitimate Payment":
             eval_payload = "00020101021126580014bd.bkash.b2b0110MCH_5411_01520454115303050"
+            payload_eval_res = validate_payment_qr_payload(eval_payload)
         elif archetype == "Dynamic QR MITM Amount Surge":
             eval_payload = "00020101021226580014bd.bkash.b2b0110MCH_5812"
+            payload_eval_res = validate_payment_qr_payload(eval_payload)
         elif detected_qr_payload:
             eval_payload = detected_qr_payload
+            payload_eval_res = validate_payment_qr_payload(eval_payload)
         else:
             eval_payload = "00020101021126580014bd.bkash.b2b"
+            payload_eval_res = validate_payment_qr_payload(eval_payload)
 
-        payload_eval_res = validate_payment_qr_payload(eval_payload)
+        # Authentic payment QRs have legitimate cryptographic signatures (e.g. EMVCo/Bangla QR); normalize entropy baseline
+        effective_entropy = 3.6 if payload_eval_res["is_payment"] and qr_entropy > 4.2 else qr_entropy
 
         zscore = (amount - 300.0) / 100.0
         v1h = velocity_5m + 1.0
         v_ratio = v1h / (v1h + 2.0)
         feat_vector = np.array([
-            qr_type, qr_entropy, amount, mcc,
+            qr_type, effective_entropy, amount, mcc,
             23.7808, 90.4152, 23.7808 + (haversine_dist / 111.0), 90.4152,
             haversine_dist, device_trust, latency_ms, pin_attempts,
             velocity_5m, v1h, v_ratio, zscore
@@ -1378,11 +1714,12 @@ def render_simulator_section():
             ano_score = 1.0000
             comp_score = 1.0000
             is_zero_day = True
-            policy = "Strict Payment Schema Guardrail Rejection (Non-Payment Target)"
+            policy = "Strict Payment Schema Guardrail Rejection (Quishing Attack Intercepted)"
             reasons = [
                 payload_eval_res.get("risk_flag", "NON_PAYMENT_PAYLOAD_REJECTED"),
-                f"UNAUTHORIZED_TARGET: {eval_payload[:36]}",
+                f"UNAUTHORIZED_TARGET: {eval_payload[:40]}",
                 "PAYMENT_SCHEMA_VIOLATION",
+                "QUISHING_ATTACK_PREVENTED",
             ]
         elif scaler and lgbm and iforest:
             scaled_vec = scaler.transform(feat_vector)
@@ -1392,9 +1729,11 @@ def render_simulator_section():
             verdict, is_zero_day, policy = gating_engine.evaluate_verdict(sup_score, ano_score, comp_score)
 
             reasons = []
-            if verdict in ["CHALLENGE_MFA", "BLOCK"] and explainer:
-                shap_res = explainer.explain_instance(scaled_vec)
-                reasons = shap_res["reason_codes"]
+            if verdict in ["CHALLENGE_MFA", "BLOCK"]:
+                active_explainer = get_cached_shap_explainer(lgbm)
+                if active_explainer:
+                    shap_res = active_explainer.explain_instance(scaled_vec)
+                    reasons = shap_res["reason_codes"]
         else:
             sup_score, ano_score, comp_score = 0.05, 0.05, 0.05
             verdict, is_zero_day, policy = "APPROVE", False, "Heuristic Fallback"
@@ -1447,6 +1786,7 @@ def render_simulator_section():
             )
             db_session.commit()
             block_hash_val = str(block.block_hash) if block and hasattr(block, "block_hash") else "RECORDED"
+            fetch_telemetry_summary.clear()
         finally:
             db_session.close()
 

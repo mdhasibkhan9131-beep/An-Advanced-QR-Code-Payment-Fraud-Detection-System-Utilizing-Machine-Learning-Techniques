@@ -13,10 +13,14 @@ from backend.data.feature_engineering import (
     calculate_haversine_km,
     calculate_shannon_entropy,
     calculate_amount_zscore,
+    validate_payment_qr_payload,
+    robust_decode_qr,
     FeatureEngineeringPipeline,
     FEATURE_COLUMNS,
 )
 from backend.cache.memory import InMemoryStateCache
+import os
+import cv2
 
 
 def test_haversine_co_located_distance():
@@ -106,4 +110,52 @@ def test_feature_pipeline_extraction():
     assert feat_dict["haversine_distance_km"] < 0.2  # Very close coordinates
     assert feat_dict["device_trust_score"] == 0.95
     assert feat_dict["scan_to_pay_latency_ms"] == 4200
+
+
+def test_validate_payment_qr_payload_real_vs_fake():
+    """Verify strict real payment acceptance vs fake/quishing web link rejection."""
+    # Real payment payloads
+    emvco_res = validate_payment_qr_payload("00020101021126580014bd.bkash.b2b0110MCH_5411")
+    assert emvco_res["is_payment"] is True
+
+    upi_res = validate_payment_qr_payload("upi://pay?pa=merchant@bkash&pn=Shop")
+    assert upi_res["is_payment"] is True
+
+    bkash_uri_res = validate_payment_qr_payload("bkash://pay?merchant=01711234567")
+    assert bkash_uri_res["is_payment"] is True
+
+    # Fake / Quishing / Non-payment payloads
+    jensen_res = validate_payment_qr_payload("http://jensenart.co")
+    assert jensen_res["is_payment"] is False
+    assert jensen_res["risk_flag"] == "NON_PAYMENT_WEB_LINK_REJECTED"
+
+    phish_res = validate_payment_qr_payload("https://fake-bkash-auth.xyz/login?session=123")
+    assert phish_res["is_payment"] is False
+    assert phish_res["risk_flag"] == "NON_PAYMENT_WEB_LINK_REJECTED"
+
+    wiki_res = validate_payment_qr_payload("https://en.wikipedia.org/wiki/QR_code")
+    assert wiki_res["is_payment"] is False
+
+    plaintext_res = validate_payment_qr_payload("Hello World Non Financial Data")
+    assert plaintext_res["is_payment"] is False
+
+
+def test_robust_decode_qr_samples():
+    """Verify multi-pass decoder accurately extracts payloads from real and fake test QRs."""
+    test_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "test_qr_codes")
+    if os.path.exists(test_dir):
+        # Real EMVCo QR
+        real_img = cv2.imread(os.path.join(test_dir, "real_bkash_merchant_qr.png"))
+        if real_img is not None:
+            decoded = robust_decode_qr(real_img)
+            assert decoded.startswith("000201")
+            assert validate_payment_qr_payload(decoded)["is_payment"] is True
+
+        # Fake Quishing QR (user uploaded vector link)
+        fake_img = cv2.imread(os.path.join(test_dir, "fake_quishing_jensenart_qr.png"))
+        if fake_img is not None:
+            decoded = robust_decode_qr(fake_img)
+            assert "jensenart.co" in decoded
+            assert validate_payment_qr_payload(decoded)["is_payment"] is False
+
 

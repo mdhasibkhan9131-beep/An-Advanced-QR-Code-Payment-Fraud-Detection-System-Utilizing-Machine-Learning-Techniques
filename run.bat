@@ -13,14 +13,10 @@ cd /d "%~dp0"
 set NEED_SETUP=0
 if not exist ".venv\Scripts\activate.bat" (
     set NEED_SETUP=1
-) else (
-    call .venv\Scripts\activate.bat
-    python -c "import streamlit, uvicorn" >nul 2>&1
-    if errorlevel 1 set NEED_SETUP=1
 )
 
 if "%NEED_SETUP%"=="1" (
-    echo [INFO] Virtual environment or packages missing. Running setup.bat...
+    echo [INFO] Virtual environment missing. Running setup.bat...
     echo.
     call setup.bat
     if errorlevel 1 (
@@ -39,14 +35,14 @@ for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8501 ^| findstr LISTENING 2^
 call .venv\Scripts\activate.bat
 
 :: 4. Start FastAPI Backend in background
-echo [1/3] Starting FastAPI Backend on http://127.0.0.1:8000 ...
+echo [1/2] Starting High-Performance API Backend on http://127.0.0.1:8000 ...
 start "QR Fraud Shield - Backend API (Port 8000)" /min cmd /c "call .venv\Scripts\activate.bat && python -m uvicorn backend.api.server:app --host 127.0.0.1 --port 8000"
 
-echo [2/3] Initializing dual-tier ML engines (LightGBM + Isolation Forest)...
-ping 127.0.0.1 -n 4 >nul
+:: Quick 1-second sync before UI launch
+ping 127.0.0.1 -n 2 >nul
 
 :: 5. Start Streamlit Frontend
-echo [3/3] Launching Modern Streamlit UI on http://localhost:8501 ...
+echo [2/2] Launching Fast AI Dashboard on http://localhost:8501 ...
 echo.
 echo ===============================================================================
 echo    * Interactive Dashboard will open in your default web browser.

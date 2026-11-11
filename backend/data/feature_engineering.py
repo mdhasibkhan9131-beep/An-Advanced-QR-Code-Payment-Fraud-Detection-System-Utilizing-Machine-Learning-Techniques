@@ -5,6 +5,7 @@ and customer spending baseline Z-scores.
 """
 
 import math
+from urllib.parse import urlparse
 from typing import Dict, Any, Tuple, List
 import numpy as np
 from backend.cache.base import StateCacheInterface
@@ -93,26 +94,7 @@ def validate_payment_qr_payload(payload_str: str) -> Dict[str, Any]:
             "risk_flag": None,
         }
 
-    # 3. Known Payment Gateway & Bank Domains / Payment Redirects
-    payment_keywords = [
-        "bkash", "nagad", "rocket", "upay", "sslcommerz", "shurjopay",
-        "portwallet", "aamarpay", "cellfin", "citybank", "bracbank", "ebl",
-        "paygate", "pay.bank", "secure-qr.bkash-auth.net"
-    ]
-    payment_paths = ["/pay", "/checkout", "/payment", "/transfer", "/qrpay", "/billpay"]
-
-    has_payment_domain = any(kw in clean_lower for kw in payment_keywords)
-    has_payment_path = any(p in clean_lower for p in payment_paths)
-
-    if has_payment_domain or has_payment_path:
-        return {
-            "is_payment": True,
-            "category": "Online Payment Gateway / Merchant Endpoint",
-            "message": "Authorized payment gateway or merchant checkout URL recognized.",
-            "risk_flag": None,
-        }
-
-    # 4. Fallback for testing harness placeholders
+    # 3. Fallback for testing harness placeholders
     if "valid_qr_payload" in clean_lower:
         return {
             "is_payment": True,
@@ -121,16 +103,50 @@ def validate_payment_qr_payload(payload_str: str) -> Dict[str, Any]:
             "risk_flag": None,
         }
 
-    # 5. Generic Non-Payment URLs (e.g., proofpoint.com, google.com, etc.)
-    if clean_lower.startswith("http://") or clean_lower.startswith("https://") or "www." in clean_lower:
+    # 4. Strict Whitelist of Authorized Payment Gateway & Bank Domains
+    # (Phishing domains like bkash-auth.net are strictly rejected)
+    trusted_payment_domains = [
+        "bkash.com", "nagad.com.bd", "rocket.com.bd", "upaybd.com",
+        "sslcommerz.com", "shurjopay.com.bd", "portwallet.com",
+        "aamarpay.com", "cellfin.com.bd", "citybank.com.bd",
+        "bracbank.com", "ebl.com.bd", "paygate.com"
+    ]
+
+    if clean_lower.startswith(("http://", "https://", "www.")):
+        try:
+            parsed = urlparse(clean_str if "://" in clean_str else "http://" + clean_str)
+            domain = parsed.netloc.lower()
+            path = parsed.path.lower()
+
+            is_trusted_domain = any(domain == td or domain.endswith("." + td) for td in trusted_payment_domains)
+            payment_paths = ["/pay", "/checkout", "/payment", "/transfer", "/qrpay", "/billpay", "/qr"]
+            has_payment_path = any(p in path or p in clean_lower for p in payment_paths)
+
+            if is_trusted_domain and (has_payment_path or parsed.query):
+                return {
+                    "is_payment": True,
+                    "category": "Online Payment Gateway / Merchant Endpoint",
+                    "message": f"Authorized payment gateway checkout URL recognized ({domain}).",
+                    "risk_flag": None,
+                }
+            else:
+                return {
+                    "is_payment": False,
+                    "category": "Generic External Web Link / Quishing Destination",
+                    "message": f"Scanned link points to an unauthorized or external website ('{clean_str}'). It lacks authorized merchant payment credentials.",
+                    "risk_flag": "NON_PAYMENT_WEB_LINK_REJECTED",
+                }
+        except Exception:
+            pass
+
         return {
             "is_payment": False,
             "category": "Generic External Web Link (Non-Payment)",
-            "message": f"Scanned link points to a general website ('{clean_str}'). It lacks EMVCo or merchant payment credentials.",
+            "message": f"Scanned link points to an invalid or external website ('{clean_str}').",
             "risk_flag": "NON_PAYMENT_WEB_LINK_REJECTED",
         }
 
-    # 6. Arbitrary plaintext or non-financial string
+    # 5. Arbitrary plaintext or non-financial string
     return {
         "is_payment": False,
         "category": "Unrecognized Non-Financial String",
@@ -158,6 +174,86 @@ def calculate_shannon_entropy(payload_str: str) -> float:
         entropy -= p * math.log2(p)
 
     return round(entropy, 4)
+
+
+def robust_decode_qr(cv_img: np.ndarray) -> str:
+    """
+    Robust multi-pass QR code decoder.
+    Handles downsampled, low-contrast, or poorly illuminated images by applying
+    multi-scale interpolation (1.0x to 3.0x), grayscale conversion, CLAHE
+    histogram equalization, and Otsu binarization.
+    """
+    if cv_img is None or not isinstance(cv_img, np.ndarray) or cv_img.size == 0:
+        return ""
+
+    try:
+        import cv2
+    except ImportError:
+        return ""
+
+    detector = cv2.QRCodeDetector()
+
+    # Pass 1: Raw image
+    try:
+        data, _, _ = detector.detectAndDecode(cv_img)
+        if data and data.strip():
+            return data.strip()
+    except Exception:
+        pass
+
+    # Convert to grayscale if needed
+    if len(cv_img.shape) == 3:
+        try:
+            gray = cv2.cvtColor(cv_img, cv2.COLOR_RGB2GRAY)
+        except Exception:
+            gray = cv2.cvtColor(cv_img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = cv_img.copy()
+
+    # Pass 2: Grayscale direct
+    try:
+        data, _, _ = detector.detectAndDecode(gray)
+        if data and data.strip():
+            return data.strip()
+    except Exception:
+        pass
+
+    # Pass 3: Multi-scale upscaling (critical for low-res or small vector QR images)
+    for scale in [1.5, 2.0, 2.5, 3.0]:
+        try:
+            scaled = cv2.resize(gray, (0, 0), fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+            data, _, _ = detector.detectAndDecode(scaled)
+            if data and data.strip():
+                return data.strip()
+        except Exception:
+            continue
+
+    # Pass 4: Contrast Limited Adaptive Histogram Equalization (CLAHE)
+    try:
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        cl1 = clahe.apply(gray)
+        data, _, _ = detector.detectAndDecode(cl1)
+        if data and data.strip():
+            return data.strip()
+
+        # Upscaled CLAHE
+        scaled_clahe = cv2.resize(cl1, (0, 0), fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        data, _, _ = detector.detectAndDecode(scaled_clahe)
+        if data and data.strip():
+            return data.strip()
+    except Exception:
+        pass
+
+    # Pass 5: Otsu thresholding
+    try:
+        _, otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        data, _, _ = detector.detectAndDecode(otsu)
+        if data and data.strip():
+            return data.strip()
+    except Exception:
+        pass
+
+    return ""
 
 
 def calculate_amount_zscore(
