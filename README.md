@@ -1,7 +1,7 @@
 # Advanced QR Code Payment Fraud Detection System
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](pyproject.toml)
-[![Tests](https://img.shields.io/badge/tests-51%2F51%20passing-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-54%2F54%20passing-brightgreen.svg)](tests/)
 [![Latency SLA](https://img.shields.io/badge/P95%20Latency-28.4%20ms-success.svg)](docs/09_Testing/PERFORMANCE_REPORT.md)
 [![Recall](https://img.shields.io/badge/Fraud%20Recall-100.0%25-brightgreen.svg)](research/benchmarks/benchmark_results.json)
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](pyproject.toml)
@@ -98,7 +98,7 @@ advanced-qr-code-payment-fraud-detection-system/
 │   ├── backup_database.py   # Non-blocking online SQLite WAL hot backup with gzip & SHA-256
 │   ├── restore_database.py  # Checksum-verified atomic disaster recovery restore utility
 │   └── smoke_test.py        # Automated 6-workflow post-deployment verification harness
-├── tests/               # 13 Automated pytest test modules (51 test cases)
+├── tests/               # 13 Automated pytest test modules (54 test cases)
 ├── pyproject.toml       # Build configuration, ruff linting, pytest configuration
 └── requirements.txt     # Locked production dependencies
 ```
@@ -208,7 +208,7 @@ python -m pytest tests/ -v
 # Execute post-deployment smoke test suite
 python scripts/smoke_test.py
 ```
-- **Automated Test Results:** **51 / 51 passed (100% pass rate in 7.77s)**
+- **Automated Test Results:** **54 / 54 passed (100% pass rate in 7.57s)**
 - **Smoke Test Results:** **6 / 6 critical production workflows passed (100% success)**
 
 ---
