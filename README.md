@@ -7,6 +7,7 @@
 [![Python](https://img.shields.io/badge/python-3.11-blue.svg)](pyproject.toml)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED.svg)](deployment/docker-compose.yml)
 [![Status](https://img.shields.io/badge/status-Complete%20%26%20Verified-success.svg)](PROJECT_STATUS.md)
+[![Thesis Defense](https://img.shields.io/badge/thesis-Approved-success.svg)](PROJECT_STATUS.md)
 
 An enterprise-grade, low-latency predictive machine learning framework designed to detect, intercept, and explain fraudulent transactions in digital Quick Response (QR) code payment environments.
 
